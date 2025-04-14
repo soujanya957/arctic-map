@@ -1,0 +1,13 @@
+# Ignore database and zipped files
+backend/cpad.sqlite
+backend/zipped_shapefiles/
+
+# Ignore virtual environments
+backend/venv/
+
+# Ignore environment variables
+frontend/.env
+
+# Node modules and build files
+frontend/node_modules/
+dist/
