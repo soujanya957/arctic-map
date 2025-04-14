@@ -105,7 +105,9 @@ Get your token from [Mapbox Access Tokens](https://account.mapbox.com/access-tok
 ## Additional Notes
 
 - The `zipped_shapefiles/` directory is empty by default. Add your zipped shapefiles manually.
-- To generate zipped shapefiles from raw shapefiles, run:
+- To generate zipped shapefiles from raw shapefiles, you need to have a folder named `Arctic_CPAD` (which contains all the shapefiles) in the same parent directory as the `arctic-map` folder. The `zip_shapefiles.py` script will bundle each layer from the `Arctic_CPAD` folder and store the resulting `.zip` files in the `zipped_shapefiles/` directory (inside `backend/`).
+
+Run the following to generate the zipped shapefiles:
 
 ```bash
 python zip_shapefiles.py
@@ -113,9 +115,7 @@ python zip_shapefiles.py
 
 This will create `.zip` files for each layer in the `zipped_shapefiles/` directory.
 
+
 ## License
 
 This project is licensed under the **MIT License**.
-```
-
-You can now copy and paste everything into your `README.md` file! Let me know if you need any other changes.
