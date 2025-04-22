@@ -39,7 +39,7 @@ arctic-map/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/arctic-map.git
+git clone https://github.com/soujanya957/arctic-map.git
 cd arctic-map
 ```
 
