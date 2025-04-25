@@ -1,14 +1,15 @@
-
 # Arctic Map
 
 **Arctic Map** is a web-based tool for exploring and downloading geospatial layers.  
-- **Backend:** FastAPI serves data and shapefiles  
-- **Frontend:** Built with React + Vite  
-- **Map Rendering:** Powered by Mapbox GL JS  
+- **Backend**: FastAPI serves spatial data and zipped shapefiles  
+- **Frontend**: React + Vite  
+- **Map Rendering**: Mapbox GL JS  
 
-## File Structure
+---
 
-```bash
+## Project Structure
+
+```
 arctic-map/
 ├── backend/
 │   ├── batch_downloads.py
@@ -34,88 +35,164 @@ arctic-map/
             └── ...
 ```
 
-## Setup
+---
 
-### 1. Clone the Repository
+## Prerequisites
+
+Before setting up, make sure you have the following tools installed:
+
+### Python and pip
+
+**MacOS:**
+```bash
+brew install python
+```
+
+**Windows:**
+Download and install Python from [https://www.python.org/downloads/](https://www.python.org/downloads/).  
+During installation, check the option **"Add Python to PATH"**.
+
+Verify installation:
+```bash
+python --version
+pip --version
+```
+
+### Node.js and npm
+
+**MacOS:**
+```bash
+brew install node
+```
+
+**Windows:**
+Download and install from [https://nodejs.org/](https://nodejs.org/).
+
+Verify installation:
+```bash
+node --version
+npm --version
+```
+
+---
+
+## Clone the Repository
 
 ```bash
 git clone https://github.com/soujanya957/arctic-map.git
 cd arctic-map
 ```
 
-### 2. Backend Setup
+---
 
-In the `backend/` directory:
+## Backend Setup
 
-1. **Install dependencies:**
+1. Navigate to the backend directory:
+
+```bash
+cd backend
+```
+
+2. (Optional but recommended) Create a virtual environment:
+
+**MacOS/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**Windows:**
+```cmd
+python -m venv venv
+venv\Scripts\activate
+```
+
+3. Install the Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Run the Backend:**
+4. Make sure you have a `cpad.sqlite` file in the `backend/` directory.
 
+5. Create directories to store shapefiles:
+
+```bash
+mkdir -p zipped_shapefiles bundled_zips
+```
+
+6. Run the backend servers in two separate terminals:
+
+**Terminal 1:**
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-In a separate terminal (inside `backend/`):
-
+**Terminal 2:**
 ```bash
 uvicorn zip_downloads:app --reload --port 8001
 ```
 
-3. **Add your `cpad.sqlite` database** to the `backend/` directory.
+---
 
-4. Create two directories within `backend/` for storing shapefiles:
+## Frontend Setup
+
+1. Navigate to the frontend directory:
 
 ```bash
-mkdir backend/zipped_shapefiles
-mkdir backend/bundled_zips
+cd ../frontend
 ```
 
-### 3. Frontend Setup
-
-In the `frontend/` directory:
-
-1. **Install dependencies:**
+2. Install frontend dependencies:
 
 ```bash
 npm install
 ```
 
-2. **Run the Frontend:**
+3. Run the frontend server:
 
 ```bash
 npm run dev
 ```
 
-The frontend will be available at [http://localhost:5173](http://localhost:5173).
+The frontend will be available at:  
+[http://localhost:5173](http://localhost:5173)
 
-### 4. Mapbox Token Setup
+---
 
-In `frontend/`, create a `.env` file with your Mapbox token:
+## Mapbox Token
+
+1. Go to [https://account.mapbox.com/access-tokens](https://account.mapbox.com/access-tokens) and copy your public token (starts with `pk.`).
+
+2. Create a `.env` file inside the `frontend/` directory and add the following line:
 
 ```
 VITE_MAPBOX_ACCESS_TOKEN=pk.your_mapbox_token_here
 ```
 
-Get your token from [Mapbox Access Tokens](https://account.mapbox.com/access-tokens). Use a public token starting with `pk.`
+---
 
-## Additional Notes
+## Generating Zipped Shapefiles (Optional)
 
-- The `zipped_shapefiles/` directory is empty by default. Add your zipped shapefiles manually.
-- To generate zipped shapefiles from raw shapefiles, you need to have a folder named `Arctic_CPAD` (which contains all the shapefiles) in the same parent directory as the `arctic-map` folder. The `zip_shapefiles.py` script will bundle each layer from the `Arctic_CPAD` folder and store the resulting `.zip` files in the `zipped_shapefiles/` directory (inside `backend/`).
-
-Run the following to generate the zipped shapefiles:
+If you have a folder called `Arctic_CPAD/` containing shapefiles in the **same parent directory** as `arctic-map/`, you can generate `.zip` files by running:
 
 ```bash
+cd backend
 python zip_shapefiles.py
 ```
 
-This will create `.zip` files for each layer in the `zipped_shapefiles/` directory.
+The zipped files will appear in `backend/zipped_shapefiles/`.
 
+---
+
+## Notes
+
+- The `zipped_shapefiles/` directory is initially empty. You must add zipped shapefiles manually or generate them using the provided script.
+- The two backend apps serve spatial data and zipped shapefiles on separate ports (8000 and 8001).
+- Ensure your Mapbox token is correctly added to `.env` for the map to load.
+
+---
 
 ## License
 
-This project is licensed under the **MIT License**.
+This project is licensed under the MIT License.
