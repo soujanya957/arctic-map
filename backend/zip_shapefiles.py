@@ -12,6 +12,7 @@ os.makedirs(output_folder, exist_ok=True)
 
 # Group files by base name
 layer_files = defaultdict(list)
+
 for filename in os.listdir(input_folder):
     if filename.endswith((".shp", ".shx", ".dbf", ".prj", ".cpg", ".sbn", ".sbx", ".xml")):
         # Handle .shp.xml specially

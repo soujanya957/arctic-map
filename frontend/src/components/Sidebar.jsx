@@ -12,24 +12,58 @@ const Sidebar = ({ onLayerToggle }) => {
   const [confirmDownloadLayer, setConfirmDownloadLayer] = useState(null);
   const [showBatchDownloadPopup, setShowBatchDownloadPopup] = useState(false);
 
+  // useEffect(() => {
+  //   // fetch("http://127.0.0.1:8000/api/layers")
+  //   fetch("http://localhost:8000/api/layers")
+  //     .then((res) => res.json())
+  //     .then((data) => {
+  //       if (data.layers) {
+  //         const initialState = {};
+  //         const dropdownState = {};
+  //         data.layers.forEach((layer) => {
+  //           initialState[layer] = false;
+  //           dropdownState[layer] = false;
+  //         });
+  //         setLayers(data.layers);
+  //         setSelectedLayers(initialState);
+  //         setOpenDropdowns(dropdownState);
+  //       }
+  //     })
+  //     .catch((err) => console.error("Failed to fetch layers:", err));
+  // }, []);
+
   useEffect(() => {
-    fetch("http://localhost:8000/api/layers")
+    fetch("http://localhost:8000/api/layer_hierarchy")
       .then((res) => res.json())
       .then((data) => {
-        if (data.layers) {
-          const initialState = {};
-          const dropdownState = {};
-          data.layers.forEach((layer) => {
-            initialState[layer] = false;
-            dropdownState[layer] = false;
-          });
-          setLayers(data.layers);
-          setSelectedLayers(initialState);
-          setOpenDropdowns(dropdownState);
+        const allLayers = [];
+        const initialState = {};
+        const dropdownState = {};
+  
+        // Flatten the theme > subtheme > layers structure
+        for (const theme in data) {
+          for (const subtheme in data[theme]) {
+            const entries = data[theme][subtheme];
+            for (const entry of entries) {
+              const layerEntry = {
+                theme,
+                subtheme,
+                layer_name: entry.layer_name,
+                display_name: entry.display_name,
+              };
+              allLayers.push(layerEntry);
+              initialState[entry.layer_name] = false;
+              dropdownState[entry.layer_name] = false;
+            }
+          }
         }
+  
+        setLayers(allLayers); // this now contains objects, not just strings
+        setSelectedLayers(initialState);
+        setOpenDropdowns(dropdownState);
       })
-      .catch((err) => console.error("Failed to fetch layers:", err));
-  }, []);
+      .catch((err) => console.error("Failed to fetch layer hierarchy:", err));
+  }, []);  
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -151,39 +185,63 @@ const Sidebar = ({ onLayerToggle }) => {
         {layers.length === 0 ? (
           <p>No layers available.</p>
         ) : (
-          <ul className="layer-list">
-            {layers.map((layer) => (
-              <li key={layer} className="layer-item">
-                <div className="layer-header">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={selectedLayers[layer] || false}
-                      onChange={() => handleToggle(layer)}
-                    />
-                    {formatLayerName(layer)}
-                  </label>
-                  <button
-                    className={`dropdown-toggle ${openDropdowns[layer] ? "open" : ""}`}
-                    onClick={() => toggleDropdown(layer)}
-                    aria-label="Toggle layer options"
-                  >
-                    {openDropdowns[layer] ? "▲" : "▼"}
-                  </button>
-                </div>
-                {openDropdowns[layer] && (
-                  <ul className="dropdown-menu">
-                    <li onClick={() => handleViewAttributes(layer)}>
-                      View Attribute Table
-                    </li>
-                    <li onClick={() => setConfirmDownloadLayer(layer)}>
-                      Download SHP File
-                    </li>
+          Object.entries(
+            layers.reduce((acc, layer) => {
+              if (!acc[layer.theme]) acc[layer.theme] = {};
+              if (!acc[layer.theme][layer.subtheme]) acc[layer.theme][layer.subtheme] = [];
+              acc[layer.theme][layer.subtheme].push(layer);
+              return acc;
+            }, {})
+          ).map(([theme, subthemes]) => (
+            <div key={theme}>
+              <h3>{theme}</h3>
+              {Object.entries(subthemes).map(([subtheme, layerEntries]) => (
+                <div key={subtheme}>
+                  <h4>{subtheme}</h4>
+                  <ul className="layer-list">
+                    {layerEntries.map((layer) => (
+                      <li key={layer.layer_name} className="layer-item">
+                        <div className="layer-header">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={selectedLayers[layer.layer_name] || false}
+                              onChange={() => handleToggle(layer.layer_name)}
+                            />
+                            {layer.display_name}
+                          </label>
+                          <button
+                            className={`dropdown-toggle ${openDropdowns[layer.layer_name] ? "open" : ""}`}
+                            onClick={() => toggleDropdown(layer.layer_name)}
+                            aria-label="Toggle layer options"
+                          >
+                            {openDropdowns[layer.layer_name] ? "▲" : "▼"}
+                          </button>
+                        </div>
+                        {openDropdowns[layer.layer_name] && (
+                          <ul className="dropdown-menu">
+                            <li onClick={() => handleViewAttributes(layer.layer_name)}>
+                              View Attribute Table
+                            </li>
+                            <li onClick={() => setConfirmDownloadLayer(layer.layer_name)}>
+                              Download SHP File
+                            </li>
+                            <li
+                              onClick={() =>
+                                window.open(`http://localhost:8000/api/metadata_html/${layer.layer_name}`, "_blank")
+                              }
+                            >
+                              View Metadata
+                            </li>
+                          </ul>
+                        )}
+                      </li>
+                    ))}
                   </ul>
-                )}
-              </li>
-            ))}
-          </ul>
+                </div>
+              ))}
+            </div>
+          ))
         )}
 
         <button className="download-all-btn" onClick={handleDownloadAll}>

@@ -1,7 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 import geopandas as gpd
+import pandas as pd
 import fiona
+from bs4 import BeautifulSoup
+import re
 
 app = FastAPI()
 
@@ -24,13 +27,13 @@ def get_available_layers():
         print(f"[ERROR] Could not list layers: {e}")
         return []
 
-@app.get("/api/layers")
-def list_layers():
-    """API endpoint to list all available spatial layers."""
-    layers = get_available_layers()
-    if not layers:
-        raise HTTPException(status_code=404, detail="No spatial layers found.")
-    return {"layers": layers}
+# @app.get("/api/layers")
+# def list_layers():
+#     """API endpoint to list all available spatial layers."""
+#     layers = get_available_layers()
+#     if not layers:
+#         raise HTTPException(status_code=404, detail="No spatial layers found.")
+#     return {"layers": layers}
 
 @app.get("/api/geojson/{layer_name}")
 def get_layer_geojson(layer_name: str):
@@ -52,3 +55,89 @@ def get_layer_geojson(layer_name: str):
     except Exception as e:
         print(f"[ERROR] Failed to load layer '{layer_name}': {e}")
         raise HTTPException(status_code=500, detail=f"Failed to load layer '{layer_name}'.")
+
+def normalize_layer_name(name: str) -> str:
+    """Helper func for get_metadata_html(), 
+    normalizes frontend layer name to match metadata title format."""
+    name = name.lower().strip()
+
+    if name.startswith("a_"):
+        name = name[2:]  # remove only the prefix "a_"
+        if name.startswith("clean_"):
+            name = name[6:]
+    return name.replace(" ", "_")
+
+@app.get("/api/metadata_html/{layer_name}")
+def get_metadata_html(layer_name: str):
+    try:
+        normalized_name = normalize_layer_name(layer_name)
+        print(f"Layer name: {layer_name}")
+        print(f"🔍 Searching for layer: {normalized_name}")
+
+        with open("metadata.html", "r", encoding="utf-8") as f:
+            soup = BeautifulSoup(f, "html.parser")
+            print("✅ Metadata file loaded.")
+
+        paragraphs = soup.find_all(["p", "li"])
+        title_to_index = {}
+
+        for i, p in enumerate(paragraphs):
+            # if "title:" in p.get_text().lower(): # look in lines that are <p>
+            #     raw_title = p.get_text().lower().replace("title:", "").strip()
+            match = re.match(r"\s*title\s*:\s*(.+)", p.get_text(), re.IGNORECASE)
+            if match:
+                raw_title = match.group(1).strip().lower()
+                formatted_title = normalize_layer_name(raw_title)
+                title_to_index[formatted_title] = i
+        
+        print(f"📋 Available metadata titles: {list(title_to_index.keys())}")
+
+        if normalized_name not in title_to_index:
+            raise HTTPException(status_code=404, detail="Metadata not found for this layer.")
+
+        target_index = title_to_index[normalized_name]
+
+        # Collect HTML from the matched <p> onward until next Title or end
+        section_html = ""
+        for p in paragraphs[target_index:]:
+            text = p.get_text().lower()
+            if "title:" in text and p != paragraphs[target_index]:
+                break
+            section_html += str(p)
+
+        return Response(content=section_html, media_type="text/html")
+
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
+def fetch_layer_metadata():
+    """Helper func for get_layer_hierarchy(), 
+    references the Google Sheet of themes and subthemes for each dataset."""
+    SHEET_ID = "1CftOecfPTeTG8AY-Av2kF_yw-KW7C7B2-ZZ8N03ZqPY"  # Replace with your Sheet ID
+    GID = "583540745" # change this based on which tab of the main spreadsheet you're using
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
+    
+    try:
+        df = pd.read_csv(url)
+        records = df.to_dict(orient="records")
+        return records
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch sheet: {e}")
+        return []
+
+@app.get("/api/layer_hierarchy")
+def get_layer_hierarchy():
+    metadata = fetch_layer_metadata()
+    
+    hierarchy = {}
+    for row in metadata:
+        theme = row["theme"]
+        subtheme = row["subtheme"]
+        entry = {
+            "layer_name": row["layer_name"],
+            "display_name": row["display_name"]
+        }
+        hierarchy.setdefault(theme, {}).setdefault(subtheme, []).append(entry)
+    
+    return hierarchy
