@@ -5,6 +5,7 @@ backend/bundled_zips/
 
 # Ignore virtual environments
 backend/venv/
+venv/
 
 # Ignore environment variables
 backend/.env
