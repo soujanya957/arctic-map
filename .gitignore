@@ -1,5 +1,6 @@
 # Ignore database and zipped files
 backend/cpad.sqlite
+backend/cpad2.sqlite
 backend/zipped_shapefiles/
 backend/bundled_zips/
 
@@ -13,4 +14,4 @@ frontend/.env
 
 # Node modules and build files
 frontend/node_modules/
-dist/
+dist/.DS_Store

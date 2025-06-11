@@ -30,12 +30,16 @@ const Map = ({ activeLayers }) => {
     }
 
     const cleanedGeojson = { ...geojson, features: validFeatures };
-    const hasMultiPolygon = cleanedGeojson.features.some(
-      (f) => f.geometry?.type === "MultiPolygon"
-    );
-    const processedGeojson = hasMultiPolygon
-      ? flatten(cleanedGeojson)
-      : cleanedGeojson;
+    
+    
+    // onst hasMultiPolygon = cleanedGeojson.features.some(
+    //   (f) => f.geometry?.type === "MultiPolygon"
+    // );
+    // const processedGeojson = hasMultiPolygon
+    //   ? flatten(cleanedGeojson)
+    //   : cleanedGeojson;
+
+    const processedGeojson = flatten(cleanedGeojson);
 
     mapInstance.current.addSource(sourceId, {
       type: "geojson",
