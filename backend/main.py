@@ -99,7 +99,8 @@ def get_metadata_html(layer_name: str):
         # Step 2: Collect all HTML, iterating through every following tag until the next heading <h1> tag
         section_html = str(target_layer) # start with the name of the layer you're looking for 
         for tag in target_layer.find_next_siblings():
-            if tag.name == "h1":
+            # if tag.name == "h1":
+            if tag.find("h1"):
                 break
             section_html += str(tag)
 
