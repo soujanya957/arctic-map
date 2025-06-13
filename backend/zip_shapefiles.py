@@ -3,9 +3,9 @@ import zipfile
 from collections import defaultdict
 
 # Define paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-input_folder = os.path.join(BASE_DIR, "..", "..", "Arctic_CPAD")
-output_folder = os.path.join(BASE_DIR, "zipped_shapefiles")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # arctic-map
+input_folder = os.path.join(BASE_DIR, "..", "Arctic_CPAD") # Arctic_CPAD should be in parent directory of arctic-map
+output_folder = os.path.join(BASE_DIR, "backend", "zipped_shapefiles") # arctic-map/backend/zipped_shapefiles
 
 # Ensure output folder exists
 os.makedirs(output_folder, exist_ok=True)

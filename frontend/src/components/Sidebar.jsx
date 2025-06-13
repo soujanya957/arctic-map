@@ -23,6 +23,9 @@ const Sidebar = ({ onLayerToggle }) => {
   const [confirmDownloadLayer, setConfirmDownloadLayer] = useState(null);
   const [showBatchDownloadPopup, setShowBatchDownloadPopup] = useState(false);
 
+  // this is the old implementation of populating all the datasets in the sidebar
+  // it's since been updated to rely on a google sheets ordering of datasets
+  //
   // useEffect(() => {
   //   // fetch("http://127.0.0.1:8000/api/layers")
   //   fetch("http://localhost:8000/api/layers")

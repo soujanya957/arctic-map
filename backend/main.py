@@ -62,9 +62,9 @@ def normalize_layer_name(name: str) -> str:
     name = name.lower().strip()
 
     if name.startswith("a_"):
-        name = name[2:]  # remove only the prefix "a_"
+        name = name[2:]  # remove prefix "a_"
         if name.startswith("clean_"):
-            name = name[6:]
+            name = name[6:] # remove prefix "clean_"
     return name.replace(" ", "_")
 
 @app.get("/api/metadata_html/{layer_name}")
@@ -78,40 +78,53 @@ def get_metadata_html(layer_name: str):
             soup = BeautifulSoup(f, "html.parser")
             print("✅ Metadata file loaded.")
 
-        paragraphs = soup.find_all(["p", "li"])
-        title_to_index = {}
+        style_tags = soup.find_all("style")
+        styles_combined = "\n".join(str(tag) for tag in style_tags)
 
-        for i, p in enumerate(paragraphs):
-            # if "title:" in p.get_text().lower(): # look in lines that are <p>
-            #     raw_title = p.get_text().lower().replace("title:", "").strip()
+        # Step 1. find the specific <p> tag that contains the "Title:" we're looking for
+        all_paragraphs = soup.find_all("p")
+        target_layer = None # stores the matching layer title <p> name
+
+        for p in all_paragraphs:
             match = re.match(r"\s*title\s*:\s*(.+)", p.get_text(), re.IGNORECASE)
             if match:
                 raw_title = match.group(1).strip().lower()
-                formatted_title = normalize_layer_name(raw_title)
-                title_to_index[formatted_title] = i
+                if normalize_layer_name(raw_title) == normalized_name:
+                    target_layer = p # udpate value when we find the matching <p> tag 
+                    break 
         
-        print(f"📋 Available metadata titles: {list(title_to_index.keys())}")
-
-        if normalized_name not in title_to_index:
-            raise HTTPException(status_code=404, detail="Metadata not found for this layer.")
-
-        target_index = title_to_index[normalized_name]
-
-        # Collect HTML from the matched <p> onward until next Title or end
-        section_html = ""
-        for p in paragraphs[target_index:]:
-            text = p.get_text().lower()
-            if "title:" in text and p != paragraphs[target_index]:
+        if not target_layer:
+            raise HTTPException(status_code=404, detail=f"Metadata with title '{layer_name} not found.")
+        
+        # Step 2: Collect all HTML, iterating through every following tag until the next heading <h1> tag
+        section_html = str(target_layer) # start with the name of the layer you're looking for 
+        for tag in target_layer.find_next_siblings():
+            if tag.name == "h1":
                 break
-            section_html += str(p)
+            section_html += str(tag)
 
-        return Response(content=section_html, media_type="text/html")
+        # 4. Wrap in full HTML with styles
+        full_html = f"""
+        <html>
+        <head>
+            {styles_combined}
+        </head>
+        <body>
+            {section_html}
+        </body>
+        </html>
+        """
 
+        return Response(content=full_html, media_type="text/html")
+    
+    except FileNotFoundError:
+        print("[ERROR] metadata.html not found.")
+        raise HTTPException(status_code=500, detail="Metadata source file not found on server.")
     except Exception as e:
         print(f"[ERROR] {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
 
-def fetch_layer_metadata():
+def fetch_layers_theme_info():
     """Helper func for get_layer_hierarchy(), 
     references the Google Sheet of themes and subthemes for each dataset."""
     SHEET_ID = "1CftOecfPTeTG8AY-Av2kF_yw-KW7C7B2-ZZ8N03ZqPY"  # Replace with your Sheet ID
@@ -128,7 +141,7 @@ def fetch_layer_metadata():
 
 @app.get("/api/layer_hierarchy")
 def get_layer_hierarchy():
-    metadata = fetch_layer_metadata()
+    metadata = fetch_layers_theme_info() 
     
     hierarchy = {}
     for row in metadata:
