@@ -40,7 +40,8 @@
 }
 
 .layer-list label {
-  display: flex;
+  /* display: flex; */
+  display: inline-block; /* for consistent width checkboxes */ 
   align-items: center;
   font-size: 14px;
   color: #444;
@@ -60,6 +61,7 @@
   position: relative;
   display: inline-block;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
 .layer-list input[type="checkbox"]:checked::before {
@@ -88,7 +90,7 @@
   transition: transform 0.3s ease;
 }
 
-.dropdown-toggle::before {
+/* .dropdown-toggle::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -103,7 +105,7 @@
 
 .dropdown-toggle.open::before {
   transform: translate(-50%, -50%) rotate(-135deg);
-}
+} */
 
 .dropdown-menu {
   margin-top: 6px;

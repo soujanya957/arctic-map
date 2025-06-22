@@ -1,12 +1,15 @@
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 import geopandas as gpd
 import pandas as pd
 import fiona
 from bs4 import BeautifulSoup
 import re
+from geopy.geocoders import Nominatim 
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 app = FastAPI()
+geolocator = Nominatim(user_agent="CPAD-web-gis-app") # instantiate geocoder here for searchbar purposes
 
 # Enable CORS for frontend integration
 app.add_middleware(
@@ -104,7 +107,7 @@ def get_metadata_html(layer_name: str):
                 break
             section_html += str(tag)
 
-        # 4. Wrap in full HTML with styles
+        # Step 3: Wrap in full HTML with styles
         full_html = f"""
         <html>
         <head>
@@ -155,3 +158,16 @@ def get_layer_hierarchy():
         hierarchy.setdefault(theme, {}).setdefault(subtheme, []).append(entry)
     
     return hierarchy
+
+@app.get("/api/geocode")
+async def geocode_location(query: str = Query(..., description="City or country name to geocode")):
+    try:
+        location = geolocator.geocode(query, timeout=5) # geopy library has built in geocode method to talk to Nominatim API server
+        if location:
+            return {"lat": location.latitude, "lon": location.longitude, "address": location.address}
+        else:
+            raise HTTPException(status_code=404, detail="Location not found by geocoding service.")
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        raise HTTPException(status_code=500, detail=f"Geocoding service error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")

@@ -9,6 +9,7 @@ cligj==0.7.2
 fastapi==0.115.12
 fiona==1.10.1
 geopandas==1.0.1
+geopy==2.4.1
 h11==0.14.0
 idna==3.10
 numpy==2.2.4

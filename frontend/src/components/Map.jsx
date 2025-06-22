@@ -1,23 +1,24 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState} from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { flatten } from "@turf/turf";
+import SearchBar from './SearchBar';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 const Map = ({ activeLayers }) => {
   const mapContainer = useRef(null);
-  const mapInstance = useRef(null);
+  const mapRef = useRef(null); // renamed mapInstance to mapRef
   const loadingLayers = useRef(new Set());
+  const [mapboxMap, setMapboxMap] = useState(null); // holds actual Mapbox map object
 
   const addLayerToMap = useCallback((layerName, geojson) => {
-    if (!mapInstance.current) return;
+    if (!mapRef.current) return;
 
     const sourceId = `source-${layerName}`;
     const layerId = `layer-${layerName}`;
 
-    if (mapInstance.current.getSource(sourceId)) {
-      console.log(`Source ${sourceId} already exists. Skipping.`);
+    if (mapRef.current.getSource(sourceId)) {
       return;
     }
 
@@ -41,7 +42,7 @@ const Map = ({ activeLayers }) => {
 
     const processedGeojson = flatten(cleanedGeojson);
 
-    mapInstance.current.addSource(sourceId, {
+    mapRef.current.addSource(sourceId, {
       type: "geojson",
       data: processedGeojson,
     });
@@ -51,7 +52,7 @@ const Map = ({ activeLayers }) => {
     );
 
     if (geometryTypes.has("Point")) {
-      mapInstance.current.addLayer({
+      mapRef.current.addLayer({
         id: `${layerId}-points`,
         type: "circle",
         source: sourceId,
@@ -62,17 +63,17 @@ const Map = ({ activeLayers }) => {
         },
       });
 
-      mapInstance.current.on("click", `${layerId}-points`, (e) => {
+      mapRef.current.on("click", `${layerId}-points`, (e) => {
         const props = e.features[0].properties;
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-          .addTo(mapInstance.current);
+          .addTo(mapRef.current);
       });
     }
 
     if (geometryTypes.has("LineString")) {
-      mapInstance.current.addLayer({
+      mapRef.current.addLayer({
         id: `${layerId}-lines`,
         type: "line",
         source: sourceId,
@@ -85,7 +86,7 @@ const Map = ({ activeLayers }) => {
     }
 
     if (geometryTypes.has("Polygon")) {
-      mapInstance.current.addLayer({
+      mapRef.current.addLayer({
         id: `${layerId}-polygons`,
         type: "fill",
         source: sourceId,
@@ -96,7 +97,7 @@ const Map = ({ activeLayers }) => {
         },
       });
 
-      mapInstance.current.addLayer({
+      mapRef.current.addLayer({
         id: `${layerId}-outline`,
         type: "line",
         source: sourceId,
@@ -132,67 +133,76 @@ const Map = ({ activeLayers }) => {
 
     // comment this out for no zoom
     if (!bounds.isEmpty()) {
-      mapInstance.current.fitBounds(bounds, { padding: 20 });
+      mapRef.current.fitBounds(bounds, { padding: 20 });
     }
   }, []);
 
   const removeLayerFromMap = useCallback((layerName) => {
-    if (!mapInstance.current) return;
+    if (!mapRef.current) return;
 
     const sourceId = `source-${layerName}`;
     const layerId = `layer-${layerName}`;
 
     ["points", "lines", "polygons", "outline"].forEach((type) => {
       const id = `${layerId}-${type}`;
-      if (mapInstance.current.getLayer(id)) {
-        mapInstance.current.removeLayer(id);
+      if (mapRef.current.getLayer(id)) {
+        mapRef.current.removeLayer(id);
       }
     });
 
-    if (mapInstance.current.getSource(sourceId)) {
-      mapInstance.current.removeSource(sourceId);
+    if (mapRef.current.getSource(sourceId)) {
+      mapRef.current.removeSource(sourceId);
     }
   }, []);
 
   useEffect(() => {
-    document.title = "CPAD Maps Visualization";
+    document.title = "CPAD Web GIS Maps Visualization";
 
-    if (mapInstance.current) return;
+    if (mapRef.current) {
+      console.log("Map already initialized, returning."); 
+      return;
+    };
 
-    mapInstance.current = new mapboxgl.Map({
+    if (!mapContainer.current) {
+      console.error("mapContainer.current is null! Cannot initialize map.");
+      return;
+    }
+
+    mapRef.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/outdoors-v12",
+      style: "mapbox://styles/mapbox/streets-v11",
       center: [-160, 75],
       zoom: 3.35,
       projection: "globe",
     });
 
-    mapInstance.current.on("load", () => {
-      mapInstance.current.setFog({
+    mapRef.current.on("load", () => {
+      mapRef.current.setFog({
         color: "white",
         "high-color": "#add8e6",
         "horizon-blend": 0.2,
         "space-color": "#000000",
         "star-intensity": 0.15,
       });
+      setMapboxMap(mapRef.current); // store the actual map object in state after load
     });
 
     return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
       }
     };
-  }, []);
+  }, []); // No dependencies for this effect, it runs once on mount
 
   useEffect(() => {
-    if (!mapInstance.current) return;
+    if (!mapRef.current) return;
 
     Object.entries(activeLayers).forEach(([layerName, isActive]) => {
       const sourceId = `source-${layerName}`;
       if (isActive) {
         if (
-          !mapInstance.current.getSource(sourceId) &&
+          !mapRef.current.getSource(sourceId) &&
           !loadingLayers.current.has(layerName)
         ) {
           loadingLayers.current.add(layerName);
@@ -218,18 +228,14 @@ const Map = ({ activeLayers }) => {
     });
   }, [activeLayers, addLayerToMap, removeLayerFromMap]);
 
-  return <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />;
-
-  // return (
-  //   <>
-  //     <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
-  //     {mapReady && mapInstance.current && (
-  //       <GeocoderControl map={mapInstance.current} />
-  //     )}
-  //   </>
-  // );
-
-
+  return (
+    <div style={{ flex: 1, position: "relative" }}>
+      {/* The actual Mapbox container */}
+      <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+      {/* Only render SearchBar when mapboxMap (the actual map object) is available and not null */}
+      {mapboxMap && <SearchBar map={mapboxMap} />}
+    </div>
+  );
 };
 
 export default Map;

@@ -1,9 +1,12 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+  /* the commented out styling is unnecessary because of the 100vh/100vw div container in app.jsx */
+  /* max-width: 1280px;  <-- REMOVE OR COMMENT OUT */
+  /* margin: 0 auto;    <-- REMOVE OR COMMENT OUT */
+  /* padding: 2rem;     <-- REMOVE OR COMMENT OUT */
+  height: 100%; /* Now this will correctly take 100% of body */
+  width: 100%; /* Ensure it takes full width */
+  /* text-align: center; <-- Potentially remove if it affects map layout */
+} 
 
 .logo {
   height: 6em;
