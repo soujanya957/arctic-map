@@ -190,6 +190,9 @@ const Map = ({ activeLayers }) => {
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
+
+        mapRef.current.off('zoomend'); // Clean up event listener
+
         mapRef.current = null;
       }
     };
