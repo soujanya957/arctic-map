@@ -159,24 +159,12 @@ def get_layer_hierarchy():
     
     return hierarchy
 
-# @app.get("/api/geocode")
-# async def geocode_location(query: str = Query(..., description="City or country name to geocode")):
-#     try:
-#         location = geolocator.geocode(query, timeout=5) # geopy library has built in geocode method to talk to Nominatim API server
-#         if location:
-#             return {"lat": location.latitude, "lon": location.longitude, "address": location.address}
-#         else:
-#             raise HTTPException(status_code=404, detail="Location not found by geocoding service.")
-#     except (GeocoderTimedOut, GeocoderServiceError) as e:
-#         raise HTTPException(status_code=500, detail=f"Geocoding service error: {e}")
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
 @app.get("/api/geocode")
 async def geocode(query: str = Query(...)):
     try:
         location = geolocator.geocode(query, timeout=5)
         if location:
+            
             # Nominatim's boundingbox format: [minlat, maxlat, minlon, maxlon]
             # Mapbox GL JS fitBounds expects: [west, south, east, north] which is [minlon, minlat, maxlon, maxlat]
             nominatim_bbox = location.raw.get('boundingbox')
