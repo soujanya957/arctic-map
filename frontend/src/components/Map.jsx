@@ -10,9 +10,10 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 const Map = ({ activeLayers, onDrawGeometry }) => {
   const mapContainer = useRef(null);
-  const mapRef = useRef(null); // renamed mapInstance to mapRef
+  const mapRef = useRef(null);
   const draw = useRef(null);
   const loadingLayers = useRef(new Set());
+  const [mapboxMap, setMapboxMap] = useState(null); // holds actual Mapbox map object
   const [drawMode, setDrawMode] = useState(false);
 
   // Add/Remove data layers (unchanged)
@@ -194,16 +195,16 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
             trash: true,
           },
         });
-        mapInstance.current.addControl(draw.current, "top-left");
-        mapInstance.current.on("draw.create", handleDrawChange);
-        mapInstance.current.on("draw.update", handleDrawChange);
-        mapInstance.current.on("draw.delete", () => {
+        mapRef.current.addControl(draw.current, "top-left");
+        mapRef.current.on("draw.create", handleDrawChange);
+        mapRef.current.on("draw.update", handleDrawChange);
+        mapRef.current.on("draw.delete", () => {
           if (onDrawGeometry) onDrawGeometry(null);
         });
       }
     } else {
       if (draw.current) {
-        mapInstance.current.removeControl(draw.current);
+        mapRef.current.removeControl(draw.current);
         draw.current = null;
         if (onDrawGeometry) onDrawGeometry(null);
       }
@@ -222,7 +223,7 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
 
   // Data layers
   useEffect(() => {
-    if (!mapInstance.current) return;
+    if (!mapRef.current) return;
     Object.entries(activeLayers).forEach(([layerName, isActive]) => {
       const sourceId = `source-${layerName}`;
       if (isActive) {
@@ -262,8 +263,8 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
       <button
         style={{
           position: "absolute",
-          top: 18,
-          right: 18,
+          top: 50,
+          right: 10,
           zIndex: 10,
           background: drawMode ? "#1976d2" : "#f7f7f7",
           color: drawMode ? "#fff" : "#1976d2",
@@ -284,8 +285,8 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
         <div
           style={{
             position: "absolute",
-            top: 56,
-            right: 18,
+            top: 93,
+            right: 10,
             zIndex: 10,
             background: "rgba(255,255,255,0.95)",
             borderRadius: 5,

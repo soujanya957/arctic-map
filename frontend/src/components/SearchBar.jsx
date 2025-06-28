@@ -77,7 +77,7 @@ export default function SearchBar({ map }) {
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder="Search for a location..."
-        style={{ padding: '6px', width: '200px', borderRadius: '4px' }}
+        style={{ padding: '6px', width: '200px', borderRadius: '5px', border: "1.5px solid #1976d2"}}
       />
       <button onClick={handleSearch} style={{ marginLeft: '5px', padding: '5px' }}>
         Search
