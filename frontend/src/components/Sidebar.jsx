@@ -1,6 +1,10 @@
+// Sidebar.jsx
+
 import React, { useState, useEffect } from "react";
 import "./Sidebar.css";
 import AttributeTable from "./AttributeTable";
+import Metadata from "./Metadata";
+import SpatialQueryPopup from "./SpatialQueryPopup";
 
 const Popup = ({ title, onClose, children }) => (
   <div className="attribute-popup" role="dialog" aria-modal="true">
@@ -103,8 +107,8 @@ const Sidebar = ({ onLayerToggle }) => {
     fetch(`http://localhost:8000/api/geojson/${layer}`)
       .then((res) => res.json())
       .then((geojson) => {
-        if (geojson.features && geojson.features.length > 0) {
-          const attributes = geojson.features.map((feature) => ({
+        if (geojson.geojson && geojson.geojson.features && geojson.geojson.features.length > 0) {
+          const attributes = geojson.geojson.features.map((feature) => ({
             ...feature.properties,
             geometry: feature.geometry,
           }));
@@ -121,6 +125,24 @@ const Sidebar = ({ onLayerToggle }) => {
         setAttributeData([]);
         setShowPopup(true);
         setLoadingAttributes(false);
+      });
+  };
+
+  // Handle "Meta data" click
+  const handleViewMetadata = (layer) => {
+    setLoadingMetadata(true);
+    setMetadataLayer(formatLayerName(layer));
+    fetch(`http://localhost:8000/api/geojson/${layer}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setMetadataContent(data.metadata || "No metadata found.");
+        setShowMetadataPopup(true);
+        setLoadingMetadata(false);
+      })
+      .catch((err) => {
+        setMetadataContent("Failed to load metadata.");
+        setShowMetadataPopup(true);
+        setLoadingMetadata(false);
       });
   };
 
@@ -183,6 +205,13 @@ const Sidebar = ({ onLayerToggle }) => {
     <div className="sidebar">
       <div className="sidebar-content">
         <h2>Layers</h2>
+        <button
+          className="spatial-query-btn"
+          style={{ marginBottom: "1em" }}
+          onClick={() => setShowSpatialQueryPopup(true)}
+        >
+          Spatial Queries
+        </button>
         {layers.length === 0 ? (
           <p>No layers available.</p>
         ) : (
@@ -302,6 +331,20 @@ const Sidebar = ({ onLayerToggle }) => {
             </button>
           </div>
         </Popup>
+      )}
+
+      {/* Metadata popup */}
+      <Metadata
+        open={showMetadataPopup}
+        onClose={() => setShowMetadataPopup(false)}
+        layerName={metadataLayer}
+        metadata={metadataContent}
+        loading={loadingMetadata}
+      />
+
+      {/* Spatial Query popup */}
+      {showSpatialQueryPopup && (
+        <SpatialQueryPopup onClose={() => setShowSpatialQueryPopup(false)} />
       )}
     </div>
   );
