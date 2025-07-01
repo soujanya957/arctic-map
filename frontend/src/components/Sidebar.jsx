@@ -341,7 +341,7 @@ const Sidebar = ({ onLayerToggle }) => {
         loading={loadingMetadata}
       /> */}
 
-      {/* Spatial Query popup */}
+      {/* se popup */}
       {showSpatialQueryPopup && (
         <SpatialQueryPopup onClose={() => setShowSpatialQueryPopup(false)} />
       )}

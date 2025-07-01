@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useCallback, useState} from "react";
 import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { flatten } from "@turf/turf";
 import SearchBar from './SearchBar';
 import DrawControls from './DrawControls';
@@ -10,8 +12,10 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 const Map = ({ activeLayers, onDrawGeometry }) => {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
+  const draw = useRef(null);
   const loadingLayers = useRef(new Set());
   const [mapboxMap, setMapboxMap] = useState(null); // holds initialized Mapbox map instance once loaded
+  const [drawMode, setDrawMode] = useState(false);
 
   // Add/Remove data layers (unchanged)
   const addLayerToMap = useCallback((layerName, geojson) => {
@@ -135,7 +139,7 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
     }
   }, []);
 
-  // Map setup
+  // Map and Draw setup
   useEffect(() => {
     document.title = "CPAD Web GIS Maps Visualization";
 
@@ -178,6 +182,46 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
     };
   }, []); // No dependencies for this effect, it runs once on mount
 
+  // Drawing controls
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (drawMode) {
+      if (!draw.current) {
+        draw.current = new MapboxDraw({
+          displayControlsDefault: false,
+          controls: {
+            polygon: true,
+            point: true,
+            line_string: true,
+            trash: true,
+          },
+        });
+        mapRef.current.addControl(draw.current, "top-left");
+        mapRef.current.on("draw.create", handleDrawChange);
+        mapRef.current.on("draw.update", handleDrawChange);
+        mapRef.current.on("draw.delete", () => {
+          if (onDrawGeometry) onDrawGeometry(null);
+        });
+      }
+    } else {
+      if (draw.current) {
+        mapRef.current.removeControl(draw.current);
+        draw.current = null;
+        if (onDrawGeometry) onDrawGeometry(null);
+      }
+    }
+    // eslint-disable-next-line
+  }, [drawMode]);
+
+  // Handle geometry drawn on the map
+  function handleDrawChange() {
+    if (!draw.current) return;
+    const features = draw.current.getAll().features;
+    if (features.length > 0 && onDrawGeometry) {
+      onDrawGeometry(features[features.length - 1]);
+    }
+  }
+
   // Data layers
   useEffect(() => {
     if (!mapRef.current) return;
@@ -214,11 +258,51 @@ const Map = ({ activeLayers, onDrawGeometry }) => {
   // UI: Minimal Toggle
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    {/* <div style={{ flex: 1, position: "relative" }}> */}
       <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
-
       {mapboxMap && <SearchBar map={mapboxMap} />}
-      {mapboxMap && <DrawControls map={mapboxMap} onDrawGeometry={onDrawGeometry} />}
-
+      <button
+        style={{
+          position: "absolute",
+          top: 50,
+          right: 10,
+          zIndex: 10,
+          background: drawMode ? "#1976d2" : "#f7f7f7",
+          color: drawMode ? "#fff" : "#1976d2",
+          border: "1.5px solid #1976d2",
+          borderRadius: 5,
+          padding: "7px 14px",
+          fontWeight: 500,
+          fontSize: 15,
+          cursor: "pointer",
+          outline: "none",
+        }}
+        onClick={() => setDrawMode((prev) => !prev)}
+        title="Draw for Spatial Queries"
+      >
+        {drawMode ? "Exit Draw" : "Draw for Spatial Query"}
+      </button>
+      {drawMode && (
+        <div
+          style={{
+            position: "absolute",
+            top: 93,
+            right: 10,
+            zIndex: 10,
+            background: "rgba(255,255,255,0.95)",
+            borderRadius: 5,
+            padding: "7px 12px",
+            fontSize: 13,
+            color: "#1976d2",
+            border: "1px solid #e0e0e0",
+            maxWidth: 200,
+            lineHeight: 1.5,
+          }}
+        >
+          Draw a polygon, line, or point.<br />
+          Use the trash icon to delete.
+        </div>
+      )}
     </div>
   );
 };

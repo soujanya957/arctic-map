@@ -1,5 +1,3 @@
-// SpatialQueryPopup.jsx
-
 import React, { useState, useEffect } from "react";
 
 const SPATIAL_OPERATIONS = [

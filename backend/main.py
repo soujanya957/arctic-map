@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Response, Query, Body
+from fastapi import FastAPI, HTTPException, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 import geopandas as gpd
 import pandas as pd
@@ -8,7 +8,12 @@ import re
 from geopy.geocoders import Nominatim 
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import sqlite3
-from shapely.geometry import shape
+
+# for spatial queries
+from shapely.geometry import shape # converts geoJSONs to shapely
+from shapely.prepared import prep # optimizes spatial queries on complex polygons
+from pydantic import BaseModel
+
 import json
 
 app = FastAPI()
@@ -28,7 +33,6 @@ DB_PATH = "cpad.sqlite"
 def get_available_layers():
     try:
         layers = fiona.listlayers(DB_PATH)
-        print(f"[DEBUG] Available spatial layers: {layers}")
         return layers
     except Exception as e:
         print(f"[ERROR] Could not list layers: {e}")
@@ -78,121 +82,128 @@ def get_available_layers():
 @app.get("/api/geojson/{layer_name}")
 def get_layer_geojson(layer_name: str):
     available_layers = get_available_layers()
-    get_all_metadata_layer_names()
     print(f"[DEBUG] Requested layer_name: [{layer_name}]")
 
     if layer_name not in available_layers:
-        print(f"[DEBUG] Layer '{layer_name}' not found in available layers.")
         raise HTTPException(status_code=404, detail=f"Layer '{layer_name}' not found.")
 
     try:
         gdf = gpd.read_file(DB_PATH, layer=layer_name)
         if gdf.empty or gdf.geometry.isnull().all():
-            print(f"[DEBUG] Layer '{layer_name}' has no spatial data.")
             raise HTTPException(status_code=204, detail=f"Layer '{layer_name}' has no spatial data.")
 
         gdf = gdf[gdf.is_valid]
         gdf = gdf.to_crs("EPSG:4326")
         geojson = gdf.__geo_interface__
-        metadata = get_layer_metadata(layer_name)
-        print(f"[DEBUG] Returning geojson and metadata for: [{layer_name}]")
-        return {
-            "geojson": geojson,
-            "metadata": metadata
-        }
+        return geojson
+    
     except Exception as e:
         print(f"[ERROR] Failed to load layer '{layer_name}': {e}")
         raise HTTPException(status_code=500, detail=f"Failed to load layer '{layer_name}'.")
 
+# @app.post("/api/spatial-query")
+# def spatial_query(
+#     layer_name: str = Body(...),
+#     geometry: dict = Body(...),
+#     operation: str = Body("intersects")
+# ):
+#     available_layers = get_available_layers()
+#     if layer_name not in available_layers:
+#         raise HTTPException(status_code=404, detail=f"Layer '{layer_name}' not found.")
+
+#     try:
+#         gdf = gpd.read_file(DB_PATH, layer=layer_name)
+#         if gdf.empty or gdf.geometry.isnull().all():
+#             raise HTTPException(status_code=204, detail="Layer has no spatial data.")
+
+#         query_geom = shape(geometry)
+
+#         if operation == "intersects":
+#             mask = gdf.geometry.intersects(query_geom)
+#         elif operation == "within":
+#             mask = gdf.geometry.within(query_geom)
+#         elif operation == "contains":
+#             mask = gdf.geometry.contains(query_geom)
+#         elif operation == "touches":
+#             mask = gdf.geometry.touches(query_geom)
+#         elif operation == "crosses":
+#             mask = gdf.geometry.crosses(query_geom)
+#         elif operation == "overlaps":
+#             mask = gdf.geometry.overlaps(query_geom)
+#         elif operation == "equals":
+#             mask = gdf.geometry.equals(query_geom)
+#         elif operation == "disjoint":
+#             mask = gdf.geometry.disjoint(query_geom)
+#         else:
+#             raise HTTPException(status_code=400, detail="Invalid operation.")
+
+#         filtered = gdf[mask]
+#         filtered = filtered.to_crs("EPSG:4326")
+#         geojson = filtered.__geo_interface__
+
+#         return {"geojson": geojson, "count": len(filtered)}
+#     except Exception as e:
+#         print(f"[ERROR] Spatial query failed: {e}")
+#         raise HTTPException(status_code=500, detail="Spatial query failed.")
+
+# pydantic model for request body, sent from frontend
+class SpatialQueryRequest(BaseModel):
+    geometry: dict  # geoJSON of the user's drawn boundary
+    layers: list[str] # list of layer names selected by the user
+
 @app.post("/api/spatial-query")
-def spatial_query(
-    layer_name: str = Body(...),
-    geometry: dict = Body(...),
-    operation: str = Body("intersects")
-):
-    available_layers = get_available_layers()
-    if layer_name not in available_layers:
-        raise HTTPException(status_code=404, detail=f"Layer '{layer_name}' not found.")
+def spatial_query(request_data: SpatialQueryRequest):
+    drawn_geometry_json = request_data.geometry # user's custom boundary
+    layers_to_query = request_data.layers # user's currently selected layers
 
+    if not drawn_geometry_json or not layers_to_query:
+        raise HTTPException(status_code=400, detail="Missing geometry or layers in request.")
+        
     try:
-        gdf = gpd.read_file(DB_PATH, layer=layer_name)
-        if gdf.empty or gdf.geometry.isnull().all():
-            raise HTTPException(status_code=204, detail="Layer has no spatial data.")
+        query_geom = shape(drawn_geometry_json)
 
-        query_geom = shape(geometry)
+        # Use prepared geometry for optimized intersection checks, especially for complex polygons
+        # prepared_query_geom = prep(query_geom)
 
-        if operation == "intersects":
-            mask = gdf.geometry.intersects(query_geom)
-        elif operation == "within":
-            mask = gdf.geometry.within(query_geom)
-        elif operation == "contains":
-            mask = gdf.geometry.contains(query_geom)
-        elif operation == "touches":
-            mask = gdf.geometry.touches(query_geom)
-        elif operation == "crosses":
-            mask = gdf.geometry.crosses(query_geom)
-        elif operation == "overlaps":
-            mask = gdf.geometry.overlaps(query_geom)
-        elif operation == "equals":
-            mask = gdf.geometry.equals(query_geom)
-        elif operation == "disjoint":
-            mask = gdf.geometry.disjoint(query_geom)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid operation.")
-
-        filtered = gdf[mask]
-        filtered = filtered.to_crs("EPSG:4326")
-        geojson = filtered.__geo_interface__
-
-        return {"geojson": geojson, "count": len(filtered)}
     except Exception as e:
-        print(f"[ERROR] Spatial query failed: {e}")
-        raise HTTPException(status_code=500, detail="Spatial query failed.")
+        raise HTTPException(status_code=400, detail=f"Invalid drawn geometry: {e}")
+    
+    results = {} # store the FeatureCollection for each intersecting layer
+    available_layers = get_available_layers() 
 
-@app.post("/api/spatial-query")
-def spatial_query(
-    layer_name: str = Body(...),
-    geometry: dict = Body(...),
-    operation: str = Body("intersects")
-):
-    available_layers = get_available_layers()
-    if layer_name not in available_layers:
-        raise HTTPException(status_code=404, detail=f"Layer '{layer_name}' not found.")
+    # loop through each of the user's currently selected layers
+    for layer_name in layers_to_query:
+        if layer_name not in available_layers:
+            print(f"Warning: Requested layer '{layer_name}' not found on backend. Skipping.")
+            continue # Skip layers not found on the backend
 
-    try:
-        gdf = gpd.read_file(DB_PATH, layer=layer_name)
-        if gdf.empty or gdf.geometry.isnull().all():
-            raise HTTPException(status_code=204, detail="Layer has no spatial data.")
+        try:
+            gdf = gpd.read_file(DB_PATH, layer=layer_name)
 
-        query_geom = shape(geometry)
+            if gdf.empty or gdf.geometry.isnull().all():
+                print(f"Layer '{layer_name}' is empty or has no valid geometry. Skipping.")
+                continue
 
-        if operation == "intersects":
+            # find all features that INTERSECT with the user's custom boundary
+            # mask = gdf.geometry.intersects(prepared_query_geom)
             mask = gdf.geometry.intersects(query_geom)
-        elif operation == "within":
-            mask = gdf.geometry.within(query_geom)
-        elif operation == "contains":
-            mask = gdf.geometry.contains(query_geom)
-        elif operation == "touches":
-            mask = gdf.geometry.touches(query_geom)
-        elif operation == "crosses":
-            mask = gdf.geometry.crosses(query_geom)
-        elif operation == "overlaps":
-            mask = gdf.geometry.overlaps(query_geom)
-        elif operation == "equals":
-            mask = gdf.geometry.equals(query_geom)
-        elif operation == "disjoint":
-            mask = gdf.geometry.disjoint(query_geom)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid operation.")
 
-        filtered = gdf[mask]
-        filtered = filtered.to_crs("EPSG:4326")
-        geojson = filtered.__geo_interface__
+            filtered_gdf = gdf[mask]
 
-        return {"geojson": geojson, "count": len(filtered)}
-    except Exception as e:
-        print(f"[ERROR] Spatial query failed: {e}")
-        raise HTTPException(status_code=500, detail="Spatial query failed.")
+            if not filtered_gdf.empty:
+                filtered_gdf = filtered_gdf.to_crs("EPSG:4326")
+                geojson_output = filtered_gdf.__geo_interface__
+
+                # Store the results for this layer as a dictionary
+                results[layer_name] = {
+                    "geojson": geojson_output,
+                    "count": len(filtered_gdf)
+                }
+
+        except Exception as e:
+            print(f"[ERROR] Spatial query failed for layer '{layer_name}': {e}")
+
+    return {"results": results}
 
 def normalize_layer_name(name: str) -> str:
     """Helper func for get_metadata_html(), 
