@@ -106,8 +106,9 @@ const Sidebar = ({ onLayerToggle }) => {
     fetch(`http://localhost:8000/api/geojson/${layer}`)
       .then((res) => res.json())
       .then((geojson) => {
-        if (geojson.geojson && geojson.geojson.features && geojson.geojson.features.length > 0) {
-          const attributes = geojson.geojson.features.map((feature) => ({
+
+        if (geojson && geojson.type == "FeatureCollection" && geojson.features && geojson.features.length > 0) {
+          const attributes = geojson.features.map((feature) => ({
             ...feature.properties,
             geometry: feature.geometry,
           }));
@@ -341,7 +342,7 @@ const Sidebar = ({ onLayerToggle }) => {
         loading={loadingMetadata}
       /> */}
 
-      {/* se popup */}
+      {/* Spatial Query popup */}
       {showSpatialQueryPopup && (
         <SpatialQueryPopup onClose={() => setShowSpatialQueryPopup(false)} />
       )}

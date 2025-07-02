@@ -223,8 +223,8 @@ class SpatialQueryResponse(FeatureCollection[QueryFeature]):
 
 @app.post("/api/spatial-query", response_model=SpatialQueryResponse)
 def spatial_query(request_data: SpatialQueryRequest): # Use the Pydantic model
-    drawn_boundary_json = request_data.drawn_boundary # Corrected access
-    layers_to_query = request_data.target_layers   # Corrected access
+    drawn_boundary_json = request_data.drawn_boundary 
+    layers_to_query = request_data.target_layers  
 
     if not drawn_boundary_json or not layers_to_query:
         # This check is somewhat redundant if using Pydantic, but can act as a quick exit
@@ -237,7 +237,7 @@ def spatial_query(request_data: SpatialQueryRequest): # Use the Pydantic model
         print(f"DEBUG: Drawn geometry is valid: {query_geom.is_valid}")
         
         # Optimize the query geometry for repeated intersection checks
-        prepared_query_geom = prep(query_geom)
+        # prepared_query_geom = prep(query_geom)
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid drawn geometry: {e}")
@@ -255,19 +255,14 @@ def spatial_query(request_data: SpatialQueryRequest): # Use the Pydantic model
         try:
             # Read the layer file into a GeoDataFrame
             gdf = gpd.read_file(DB_PATH, layer=layer_name)
-            print(f"DEBUG: Layer '{layer_name}' loaded. Number of features: {len(gdf)}")
-            print(f"DEBUG: CRS of '{layer_name}' BEFORE reprojection: {gdf.crs}")
-
+            
             if gdf.empty or gdf.geometry.isnull().all():
                 print(f"Layer '{layer_name}' is empty or has no valid geometry. Skipping.")
                 continue
 
             if gdf.crs and gdf.crs != "EPSG:4326":
                 gdf = gdf.to_crs("EPSG:4326")
-                print(f"DEBUG: CRS of '{layer_name}' AFTER reprojection: {gdf.crs}")
-
             print(f"DEBUG: Number of valid geometries in '{layer_name}': {gdf.geometry.is_valid.sum()} out of {len(gdf)}")
-
 
             # Perform the spatial intersection
             # Use prepared_query_geom for efficiency
