@@ -1,5 +1,7 @@
 # Ignore database and zipped files
 backend/cpad.sqlite
+backend/cpad2.sqlite
+backend/cpad3.sqlite
 backend/zipped_shapefiles/
 backend/bundled_zips/
 

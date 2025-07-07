@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.3",
     "@turf/turf": "^7.2.0",
     "mapbox-gl": "^3.11.0",
