@@ -7,14 +7,18 @@ from bs4 import BeautifulSoup
 import re
 from geopy.geocoders import Nominatim 
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-import sqlite3
+# import sqlite3
+from dotenv import load_dotenv
+import os
+load_dotenv() # Load environment variables from .env file
 
 # for spatial queries
 from shapely.geometry import shape # converts geoJSONs to shapely
 from shapely.prepared import prep # optimizes spatial queries on complex polygons
 from pydantic import BaseModel, Field 
 from typing import List, Dict, Any
-
+from geojson_pydantic import Feature, FeatureCollection
+from geojson_pydantic.geometries import Geometry
 import json
 
 app = FastAPI()
@@ -39,6 +43,7 @@ def get_available_layers():
         print(f"[ERROR] Could not list layers: {e}")
         return []
 
+# souju's version for getting metadata using .xml files
 # def get_all_metadata_layer_names():
 #     try:
 #         conn = sqlite3.connect(DB_PATH)
@@ -147,160 +152,6 @@ def get_layer_geojson(layer_name: str):
 #         print(f"[ERROR] Spatial query failed: {e}")
 #         raise HTTPException(status_code=500, detail="Spatial query failed.")
 
-# pydantic model for request body, sent from frontend
-class SpatialQueryRequest(BaseModel):
-    drawn_boundary: Dict[str, Any] = Field(..., description="The GeoJSON Feature of the user's drawn boundary")
-    target_layers: List[str] = Field(..., description="List of layer names to query against")
-
-class QueryFeatureProperties(BaseModel):
-    layer_name: str
-    class Config:
-        extra = 'allow' # Allow additional properties that exist in the original GeoJSON
-
-from geojson_pydantic import Feature, FeatureCollection
-from geojson_pydantic.geometries import Geometry
-
-class QueryFeature(Feature[Geometry, QueryFeatureProperties]):
-    pass
-
-class SpatialQueryResponse(FeatureCollection[QueryFeature]):
-    """Response model for spatial queries, returning a single FeatureCollection."""
-    pass
-
-# @app.post("/api/spatial-query")
-# def spatial_query(request_data: SpatialQueryRequest):
-#     drawn_geometry_json = request_data.geometry # user's custom boundary
-#     layers_to_query = request_data.layers # user's currently selected layers
-
-#     if not drawn_geometry_json or not layers_to_query:
-#         raise HTTPException(status_code=400, detail="Missing geometry or layers in request.")
-        
-#     try:
-#         query_geom = shape(drawn_geometry_json)
-
-#         # Use prepared geometry for optimized intersection checks, especially for complex polygons
-#         # prepared_query_geom = prep(query_geom)
-
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Invalid drawn geometry: {e}")
-    
-#     results = {} # store the FeatureCollection for each intersecting layer
-#     available_layers = get_available_layers() 
-
-#     # loop through each of the user's currently selected layers
-#     for layer_name in layers_to_query:
-#         if layer_name not in available_layers:
-#             print(f"Warning: Requested layer '{layer_name}' not found on backend. Skipping.")
-#             continue # Skip layers not found on the backend
-
-#         try:
-#             gdf = gpd.read_file(DB_PATH, layer=layer_name)
-
-#             if gdf.empty or gdf.geometry.isnull().all():
-#                 print(f"Layer '{layer_name}' is empty or has no valid geometry. Skipping.")
-#                 continue
-
-#             # find all features that INTERSECT with the user's custom boundary
-#             # mask = gdf.geometry.intersects(prepared_query_geom)
-#             mask = gdf.geometry.intersects(query_geom)
-
-#             filtered_gdf = gdf[mask]
-
-#             if not filtered_gdf.empty:
-#                 filtered_gdf = filtered_gdf.to_crs("EPSG:4326")
-#                 geojson_output = filtered_gdf.__geo_interface__
-
-#                 # Store the results for this layer as a dictionary
-#                 results[layer_name] = {
-#                     "geojson": geojson_output,
-#                     "count": len(filtered_gdf)
-#                 }
-
-#         except Exception as e:
-#             print(f"[ERROR] Spatial query failed for layer '{layer_name}': {e}")
-
-#     return {"results": results}
-
-@app.post("/api/spatial-query", response_model=SpatialQueryResponse)
-def spatial_query(request_data: SpatialQueryRequest): # Use the Pydantic model
-    drawn_boundary_json = request_data.drawn_boundary 
-    layers_to_query = request_data.target_layers  
-
-    if not drawn_boundary_json or not layers_to_query:
-        # This check is somewhat redundant if using Pydantic, but can act as a quick exit
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing drawn_boundary or target_layers in request.")
-        
-    try:
-        # Convert drawn boundary GeoJSON to a Shapely geometry object
-        query_geom = shape(drawn_boundary_json['geometry'])
-        print(f"DEBUG: Drawn geometry type: {query_geom.geom_type}")
-        print(f"DEBUG: Drawn geometry is valid: {query_geom.is_valid}")
-        
-        # Optimize the query geometry for repeated intersection checks
-        # prepared_query_geom = prep(query_geom)
-
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid drawn geometry: {e}")
-    
-    # Store all found features in a single list
-    all_found_features: List[QueryFeature] = []
-    available_layers = get_available_layers() 
-
-    # loop through each of the user's currently selected layers
-    for layer_name in layers_to_query:
-        if layer_name not in available_layers:
-            print(f"Warning: Requested layer '{layer_name}' not found on backend. Skipping.")
-            continue
-
-        try:
-            # Read the layer file into a GeoDataFrame
-            gdf = gpd.read_file(DB_PATH, layer=layer_name)
-            
-            if gdf.empty or gdf.geometry.isnull().all():
-                print(f"Layer '{layer_name}' is empty or has no valid geometry. Skipping.")
-                continue
-
-            if gdf.crs and gdf.crs != "EPSG:4326":
-                gdf = gdf.to_crs("EPSG:4326")
-            print(f"DEBUG: Number of valid geometries in '{layer_name}': {gdf.geometry.is_valid.sum()} out of {len(gdf)}")
-
-            # Perform the spatial intersection
-            # Use prepared_query_geom for efficiency
-            mask = gdf.geometry.intersects(query_geom)
-            filtered_gdf = gdf[mask]
-
-            if not filtered_gdf.empty:
-                # Convert features to GeoJSON and add layer_name property
-                # Use to_json and then load/modify for robust property handling
-                layer_features = json.loads(filtered_gdf.to_json())['features']
-                
-                for feature in layer_features:
-                    # Add layer_name to properties
-                    if 'properties' not in feature:
-                        feature['properties'] = {}
-                    feature['properties']['layer_name'] = layer_name
-                    
-                    # Validate against Pydantic model for type safety and potential extra validation
-                    try:
-                        all_found_features.append(QueryFeature.model_validate(feature))
-                    except Exception as pydantic_e:
-                        print(f"Warning: Failed to validate feature from layer '{layer_name}' with Pydantic: {pydantic_e}")
-                        # If validation fails, you might still want to include it or exclude it
-                        # For now, let's include it as a generic Feature if the structured one fails
-                        all_found_features.append(Feature.model_validate(feature))
-
-
-        except fiona.errors.DriverError as e:
-            print(f"[ERROR] Fiona driver error for layer '{layer_name}': {e}. Skipping.")
-            # Do not raise HTTPException here, just skip this layer if it fails
-        except Exception as e:
-            print(f"[ERROR] Spatial query failed for layer '{layer_name}': {e}. Skipping.")
-            # Again, do not raise HTTPException, let other layers process
-
-    # Return a single FeatureCollection containing all found features
-    return SpatialQueryResponse(type="FeatureCollection", features=all_found_features)
-
-
 def normalize_layer_name(name: str) -> str:
     """Helper func for get_metadata_html(), 
     normalizes frontend layer name to match metadata title format."""
@@ -373,8 +224,14 @@ def get_metadata_html(layer_name: str):
 def fetch_layers_theme_info():
     """Helper func for get_layer_hierarchy(), 
     references the Google Sheet of themes and subthemes for each dataset."""
-    SHEET_ID = "1CftOecfPTeTG8AY-Av2kF_yw-KW7C7B2-ZZ8N03ZqPY"  # Replace with your Sheet ID
-    GID = "583540745" # change this based on which tab of the main spreadsheet you're using
+
+    SHEET_ID = os.getenv("GOOGLE_SHEET_ID")
+    GID = os.getenv("GOOGLE_SHEET_GID")
+
+    # check google sheet IDs are loaded 
+    if not SHEET_ID or not GID:
+        raise ValueError("GOOGLE_SHEET_ID or GOOGLE_SHEET_GID not found in environment variables. Please check your .env file or deployment configuration.")
+
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
     
     try:
@@ -438,3 +295,94 @@ async def geocode(query: str = Query(...)):
         raise HTTPException(status_code=500, detail=f"Geocoding service error: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+    
+
+# data structures for the spatial-query endpoint to define custom request and response structures
+class SpatialQueryRequest(BaseModel):
+    """defines structure of the request data the frontend sends to /api/spatial-query endpoint"""
+    drawn_boundary: Dict[str, Any] = Field(..., description="The GeoJSON Feature of the user's drawn boundary")
+    target_layers: List[str] = Field(..., description="List of layer names to query against")
+
+class QueryFeatureProperties(BaseModel):
+    """defines expected properties for each feature that will be returned in the spatial query endpoint response"""
+    layer_name: str # the original dataset a highlighted feature belongs to
+    class Config:
+        extra = 'allow' # Allow additional attributes that exist in the original GeoJSON
+
+class QueryFeature(Feature[Geometry, QueryFeatureProperties]):
+    """combines standard GeoJSON Feature structure with custom QueryFeatureProperties"""
+    pass
+
+class SpatialQueryResponse(FeatureCollection[QueryFeature]):
+    """defines response structure of the spatial-query endpoint, which returns a 
+    standard GeoJSON FeatureCollection (each feature is a QueryFeature"""
+    pass
+
+@app.post("/api/spatial-query", response_model=SpatialQueryResponse)
+def spatial_query(request_data: SpatialQueryRequest): 
+    drawn_boundary_json = request_data.drawn_boundary 
+    user_selected_layers = request_data.target_layers  
+
+    try:
+        # Convert user's drawn boundary GeoJSON into a Shapely geometry object
+        query_geom = shape(drawn_boundary_json['geometry'])
+        print(f"DEBUG: Drawn geometry type: {query_geom.geom_type}")
+        print(f"DEBUG: Drawn geometry is valid: {query_geom.is_valid}")
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid drawn geometry: {e}")
+    
+    # Store ALL found features in the user's defined boundary across in a single list
+    all_found_features: List[QueryFeature] = []
+    available_layers = get_available_layers() 
+
+    # loop through each of the user's currently selected layers
+    for layer_name in user_selected_layers:
+        # check that the current layer actually exists in the backend in cpad.sqlite
+        if layer_name not in available_layers:
+            print(f"Warning: Requested layer '{layer_name}' not found on backend. Skipping.")
+            continue
+
+        try:
+            # use geopandas to read the layer file into a GeoDataFrame
+            gdf = gpd.read_file(DB_PATH, layer=layer_name)
+            
+            if gdf.empty or gdf.geometry.isnull().all():
+                print(f"Layer '{layer_name}' is empty or has no valid geometry. Skipping.")
+                continue
+
+            if gdf.crs and gdf.crs != "EPSG:4326":
+                gdf = gdf.to_crs("EPSG:4326")
+            print(f"DEBUG: Number of valid geometries in '{layer_name}': {gdf.geometry.is_valid.sum()} out of {len(gdf)}")
+
+            # create a mask to see which features of the current layer (in the for loop) intersect with the user's boundary
+            mask = gdf.geometry.intersects(query_geom)
+            filtered_gdf = gdf[mask]
+
+            if not filtered_gdf.empty:
+                # Convert features to GeoJSON and add layer_name property
+                # Use to_json and then load/modify for robust property handling
+                layer_features = json.loads(filtered_gdf.to_json())['features']
+                
+                for feature in layer_features:
+                    # Add layer_name to properties
+                    if 'properties' not in feature:
+                        feature['properties'] = {}
+                    feature['properties']['layer_name'] = layer_name
+                    
+                    # Validate against Pydantic model for type safety and potential extra validation
+                    try:
+                        all_found_features.append(QueryFeature.model_validate(feature))
+                    except Exception as pydantic_e:
+                        print(f"Warning: Failed to validate feature from layer '{layer_name}' with Pydantic: {pydantic_e}")
+                        # Include feature as a generic Feature if the structured one fails
+                        all_found_features.append(Feature.model_validate(feature))
+
+
+        except fiona.errors.DriverError as e:
+            print(f"[ERROR] Fiona driver error for layer '{layer_name}': {e}. Skipping.")
+        except Exception as e:
+            print(f"[ERROR] Spatial query failed for layer '{layer_name}': {e}. Skipping.")
+
+    # Return a single FeatureCollection containing all found features
+    return SpatialQueryResponse(type="FeatureCollection", features=all_found_features)

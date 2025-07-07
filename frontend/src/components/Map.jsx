@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useCallback, useState} from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { flatten } from "@turf/turf";
+import FeatureHighlighter from './FeatureHighlighter';
 import SearchBar from './SearchBar';
 import DrawControls from './DrawControls';
+import SpatialQueryPanel from './SpatialQueryPanel';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -212,142 +214,21 @@ const Map = ({ activeLayers, onDrawGeometry, highlightedFeatures }) => {
     });
   }, [activeLayers, addLayerToMap, removeLayerFromMap]);
 
-  // cleanup on map change/unmount for highlighting features within user's custom boundary
-  useEffect(() => {
-    if (!mapboxMap) return;
-    const highlightSourceId = 'highlight-source';
-    const highlightLayerPointId = 'highlight-layer-points';
-    const highlightLayerLineId = 'highlight-layer-lines';
-    const highlightLayerPolygonId = 'highlight-layer-polygons';
-
-    // Cleanup function for this effect
-    return () => {
-      if (mapboxMap.getLayer(highlightLayerPointId)) mapboxMap.removeLayer(highlightLayerPointId);
-      if (mapboxMap.getLayer(highlightLayerLineId)) mapboxMap.removeLayer(highlightLayerLineId);
-      if (mapboxMap.getLayer(highlightLayerPolygonId)) mapboxMap.removeLayer(highlightLayerPolygonId);
-      if (mapboxMap.getSource(highlightSourceId)) mapboxMap.removeSource(highlightSourceId);
-    };
-  }, [mapboxMap]); // Dependency: only runs when mapboxMap instance changes or on unmount
-
-  // Separate effect to handle changes in highlightedFeatures
-  useEffect(() => {
-    if (!mapboxMap) return;
-
-    const highlightSourceId = 'highlight-source';
-    const highlightLayerPointId = 'highlight-layer-points';
-    const highlightLayerLineId = 'highlight-layer-lines';
-    const highlightLayerPolygonId = 'highlight-layer-polygons';
-
-    if (highlightedFeatures && highlightedFeatures.length > 0) {
-      // Update or add the source
-      if (mapboxMap.getSource(highlightSourceId)) {
-        mapboxMap.getSource(highlightSourceId).setData({
-          type: 'FeatureCollection',
-          features: highlightedFeatures,
-        });
-      } else {
-        mapboxMap.addSource(highlightSourceId, {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: highlightedFeatures,
-          },
-        });
-      }
-
-      // Add/Update Point Layer (if points exist)
-      const hasPoints = highlightedFeatures.some(f => f.geometry.type === 'Point' || f.geometry.type === 'MultiPoint');
-      if (hasPoints) {
-          if (!mapboxMap.getLayer(highlightLayerPointId)) {
-            mapboxMap.addLayer({
-              id: highlightLayerPointId,
-              type: 'circle',
-              source: highlightSourceId,
-              filter: ['==', '$type', 'Point'],
-              paint: {
-                'circle-radius': 5, 
-                'circle-color': '#00FFFF', // Bright cyan for highlight
-                'circle-stroke-color': '#FFFFFF', // White border
-                'circle-stroke-width': 2,
-                'circle-opacity': 1,
-              },
-            });
-          }
-      } else { // No points, ensure layer is removed if it exists
-        if (mapboxMap.getLayer(highlightLayerPointId)) mapboxMap.removeLayer(highlightLayerPointId);
-      }
-
-
-      // Add/Update Line Layer (if lines exist)
-      const hasLines = highlightedFeatures.some(f => f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString');
-      if (hasLines) {
-          if (!mapboxMap.getLayer(highlightLayerLineId)) {
-            mapboxMap.addLayer({
-              id: highlightLayerLineId,
-              type: 'line',
-              source: highlightSourceId,
-              filter: ['==', '$type', 'LineString'],
-              paint: {
-                'line-color': '#00FFFF', // Bright cyan
-                'line-width': 4, // Thicker line
-              },
-            });
-          }
-      } else { // No lines, remove layer
-        if (mapboxMap.getLayer(highlightLayerLineId)) mapboxMap.removeLayer(highlightLayerLineId);
-      }
-
-
-      // Add/Update Polygon Layer (if polygons exist)
-      const hasPolygons = highlightedFeatures.some(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon');
-      if (hasPolygons) {
-          if (!mapboxMap.getLayer(highlightLayerPolygonId)) {
-            mapboxMap.addLayer({
-              id: highlightLayerPolygonId,
-              type: 'fill',
-              source: highlightSourceId,
-              filter: ['==', '$type', 'Polygon'],
-              paint: {
-                'fill-color': '#00FFFF', // Bright cyan
-                'fill-opacity': 0.5,
-              },
-            });
-             if (!mapboxMap.getLayer(`${highlightLayerPolygonId}-outline`)) {
-                mapboxMap.addLayer({
-                    id: `${highlightLayerPolygonId}-outline`,
-                    type: 'line',
-                    source: highlightSourceId,
-                    filter: ['==', '$type', 'Polygon'],
-                    paint: {
-                        'line-color': '#FFFFFF', // White outline for contrast
-                        'line-width': 2,
-                    }
-                });
-             }
-          }
-      } else { // No polygons, remove layers
-        if (mapboxMap.getLayer(highlightLayerPolygonId)) mapboxMap.removeLayer(highlightLayerPolygonId);
-        if (mapboxMap.getLayer(`${highlightLayerPolygonId}-outline`)) mapboxMap.removeLayer(`${highlightLayerPolygonId}-outline`);
-      }
-
-    } else { // highlightedFeatures is null or empty, so remove all highlight layers and source
-      if (mapboxMap.getLayer(highlightLayerPointId)) mapboxMap.removeLayer(highlightLayerPointId);
-      if (mapboxMap.getLayer(highlightLayerLineId)) mapboxMap.removeLayer(highlightLayerLineId);
-      if (mapboxMap.getLayer(highlightLayerPolygonId)) mapboxMap.removeLayer(highlightLayerPolygonId);
-      if (mapboxMap.getLayer(`${highlightLayerPolygonId}-outline`)) mapboxMap.removeLayer(`${highlightLayerPolygonId}-outline`); // Remove outline too
-      if (mapboxMap.getSource(highlightSourceId)) mapboxMap.removeSource(highlightSourceId);
-    }
-
-  }, [mapboxMap, highlightedFeatures]); // Dependencies: mapboxMap and highlightedFeatures
-
-
-  // UI: Minimal Toggle
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
 
+      {/* User interface controls */}
       {mapboxMap && <SearchBar map={mapboxMap} />}
       {mapboxMap && <DrawControls map={mapboxMap} onDrawGeometry={onDrawGeometry} />}
+
+      {/* Highlighting features */}
+      <FeatureHighlighter mapboxMap={mapboxMap} highlightedFeatures={highlightedFeatures} />
+
+      {/* Spatial query results and download panel */}
+      {mapboxMap && highlightedFeatures && highlightedFeatures.length > 0 && (
+        <SpatialQueryPanel highlightedFeatures={highlightedFeatures} />
+      )}
 
     </div>
   );

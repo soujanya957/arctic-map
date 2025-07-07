@@ -68,7 +68,31 @@ pip install -r requirements.txt
 
 ---
 
-### 4. Run the backend servers
+### 4. Set up your Google Sheet for layer organization
+
+This app uses a Google Sheet to dynamically organize and fetch information about the available geospatial datasets for the sidebar (themes, subthemes, and dataset order). To enable this feature, you need to configure the `SHEET_ID` and `GID` for your specific Google Sheet.
+
+Prepare your own Google Sheet by following the instructions [here](https://docs.google.com/spreadsheets/d/1CftOecfPTeTG8AY-Av2kF_yw-KW7C7B2-ZZ8N03ZqPY/edit?gid=991325591#gid=991325591) to organize your dataset information in a tab within this sheet.
+
+Make sure this Google Sheet is publicly accessible (set to **Anyone with the link can view.**).
+
+Look at the URL in your browser's address bar. It will follow this pattern:
+https://docs.google.com/spreadsheets/d/`YOUR_SHEET_ID_HERE`/edit#gid=`YOUR_GID_HERE`
+
+- `YOUR_SHEET_ID_HERE` is the `SHEET_ID`. Copy this long string of characters.
+
+- `YOUR_GID_HERE` is the `GID` (Grid ID) for the specific tab/worksheet you want to use. Copy this number.
+
+Create a `.env` file in the `backend/` directory with the following content:
+
+```env
+GOOGLE_SHEET_ID=your_actual_sheet_id_goes_here
+GOOGLE_SHEET_GID=your_actual_gid_goes_here
+```
+
+---
+
+### 5. Run the backend servers
 
 You can run one or both FastAPI apps using Uvicorn:
 
