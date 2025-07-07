@@ -1,9 +1,10 @@
 # Arctic Map
 
-**Arctic Map** is a web-based tool for exploring and downloading geospatial layers.  
-- **Backend**: FastAPI serves spatial data and zipped shapefiles  
-- **Frontend**: React + Vite  
-- **Map Rendering**: Mapbox GL JS  
+**Arctic Map** is a web-based tool for exploring and downloading geospatial layers.
+
+* **Backend**: FastAPI serves spatial data and zipped shapefiles
+* **Frontend**: React + Vite
+* **Map Rendering**: Mapbox GL JS
 
 ---
 
@@ -21,38 +22,41 @@ arctic-map/
 │   ├── zip_downloads.py
 │   ├── zip_shapefiles.py
 │   └── zipped_shapefiles/
-└── frontend/
-    ├── .env
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    └── src/
-        ├── App.jsx
-        ├── main.jsx
-        └── components/
-            ├── Map.jsx
-            ├── Sidebar.jsx
-            └── ...
+├── frontend/
+│   ├── .env
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/
+│       ├── App.jsx
+│       ├── main.jsx
+│       └── components/
+│           ├── Map.jsx
+│           ├── Sidebar.jsx
+│           └── ...
+└── run_0.sh
 ```
 
 ---
 
 ## Prerequisites
 
-Before setting up, make sure you have the following tools installed:
+Ensure the following tools are installed on your system:
 
 ### Python and pip
 
-**MacOS:**
+**macOS:**
+
 ```bash
 brew install python
 ```
 
 **Windows:**
-Download and install Python from [https://www.python.org/downloads/](https://www.python.org/downloads/).  
-During installation, check the option **"Add Python to PATH"**.
+Download from [https://www.python.org/downloads/](https://www.python.org/downloads/)
+➡️ Be sure to check **"Add Python to PATH"** during installation.
 
-Verify installation:
+Verify:
+
 ```bash
 python --version
 pip --version
@@ -60,18 +64,45 @@ pip --version
 
 ### Node.js and npm
 
-**MacOS:**
+**macOS:**
+
 ```bash
 brew install node
 ```
 
 **Windows:**
-Download and install from [https://nodejs.org/](https://nodejs.org/).
+Download from [https://nodejs.org/](https://nodejs.org/)
 
-Verify installation:
+Verify:
+
 ```bash
 node --version
 npm --version
+```
+
+### Tmux
+
+Used to automate starting all services in one command.
+
+**macOS:**
+
+```bash
+brew install tmux
+```
+
+**Linux:**
+
+```bash
+sudo apt install tmux
+```
+
+**Windows:**
+Use [WSL](https://learn.microsoft.com/en-us/windows/wsl/) and follow Linux instructions.
+
+Verify:
+
+```bash
+tmux -V
 ```
 
 ---
@@ -85,111 +116,93 @@ cd arctic-map
 
 ---
 
-## Backend Setup
+## One-Command Run (After Initial Setup)
 
-1. Navigate to the backend directory:
-
-```bash
-cd backend
-```
-
-2. (Optional but recommended) Create a virtual environment:
-
-**MacOS/Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**Windows:**
-```cmd
-python -m venv venv
-venv\Scripts\activate
-```
-
-3. Install the Python dependencies:
+After first-time setup (see below), run everything via:
 
 ```bash
-pip install -r requirements.txt
+tmux
+./run_0.sh
 ```
 
-4. Make sure you have a `cpad.sqlite` file in the `backend/` directory.
+This script:
 
-5. Create directories to store shapefiles:
+* Starts both FastAPI backends (ports 8000 & 8001)
+* Starts the frontend (Vite on port 5173)
+* Opens each in a separate tmux pane
 
-```bash
-mkdir -p zipped_shapefiles bundled_zips
-```
-
-6. Run the backend servers in two separate terminals:
-
-**Terminal 1:**
-```bash
-uvicorn main:app --reload --port 8000
-```
-
-**Terminal 2:**
-```bash
-uvicorn zip_downloads:app --reload --port 8001
-```
+➡️ **Detach from tmux**: `Ctrl + b`, then `d`
+➡️ **Reattach later**: `tmux attach`
 
 ---
 
-## Frontend Setup
+## First-Time Setup (Required Once)
 
-1. Navigate to the frontend directory:
+### Backend Setup
 
-```bash
-cd ../frontend
-```
+1. Create and activate a virtual environment:
 
-2. Install frontend dependencies:
+   ```bash
+   cd backend
+   python3 -m venv venv
+   source venv/bin/activate  # or venv\Scripts\activate on Windows
+   ```
 
-```bash
-npm install
-```
+2. Install dependencies:
 
-3. Run the frontend server:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```bash
-npm run dev
-```
+3. Make sure `cpad.sqlite` is present in the `backend/` directory.
 
-The frontend will be available at:  
-[http://localhost:5173](http://localhost:5173)
+4. Create the necessary directories:
+
+   ```bash
+   mkdir -p zipped_shapefiles bundled_zips
+   ```
 
 ---
 
-## Mapbox Token
+### Frontend Setup
 
-1. Go to [https://account.mapbox.com/access-tokens](https://account.mapbox.com/access-tokens) and copy your public token (starts with `pk.`).
+1. Install dependencies:
 
-2. Create a `.env` file inside the `frontend/` directory and add the following line:
+   ```bash
+   cd ../frontend
+   npm install
+   ```
 
-```
-VITE_MAPBOX_ACCESS_TOKEN=pk.your_mapbox_token_here
-```
+2. Add your Mapbox token to `frontend/.env`:
+
+   ```env
+   VITE_MAPBOX_ACCESS_TOKEN=pk.your_mapbox_token_here
+   ```
+
+   You can get a free token at [https://account.mapbox.com/access-tokens](https://account.mapbox.com/access-tokens)
 
 ---
 
 ## Generating Zipped Shapefiles (Optional)
 
-If you have a folder called `Arctic_CPAD/` containing shapefiles in the **same parent directory** as `arctic-map/`, you can generate `.zip` files by running:
+If you have a folder named `Arctic_CPAD/` (containing shapefiles) in the **same parent directory** as `arctic-map/`, you can generate zipped shapefiles like so:
 
 ```bash
 cd backend
 python zip_shapefiles.py
 ```
 
-The zipped files will appear in `backend/zipped_shapefiles/`.
+* Output: `backend/zipped_shapefiles/`
+* You must run this at least once if you don't manually place zipped shapefiles in that folder.
 
 ---
 
 ## Notes
 
-- The `zipped_shapefiles/` directory is initially empty. You must add zipped shapefiles manually or generate them using the provided script.
-- The two backend apps serve spatial data and zipped shapefiles on separate ports (8000 and 8001).
-- Ensure your Mapbox token is correctly added to `.env` for the map to load.
+* The backend serves two FastAPI apps on ports **8000** (main) and **8001** (download).
+* The frontend runs at [http://localhost:5173](http://localhost:5173)
+* The directory `backend/zipped_shapefiles/` is initially empty — either generate shapefiles with the script or add them manually.
+* Make sure your Mapbox token is correctly set in `.env` for the map to load.
 
 ---
 
