@@ -68,6 +68,44 @@ const AttributeTable = ({ data, fieldTypes }) => {
 
   const filteredData = applySpatialFilter(data.filter(applyAttributeFilter));
 
+  // GeoJSON Download
+  const handleDownloadGeoJSON = () => {
+    if (filteredData.length === 0) {
+      alert("No features to download.");
+      return;
+    }
+
+    // Convert the filteredData (which are essentially GeoJSON Features)
+    // into a GeoJSON FeatureCollection.
+    // Ensure each item in filteredData has 'properties' and 'geometry' at the top level
+    const geojsonFeatures = filteredData.map(item => {
+      // Assuming item has properties and geometry directly from feature.properties and feature.geometry
+      return {
+        type: "Feature",
+        properties: { ...item }, // Copy all properties
+        geometry: item.geometry, // Use the geometry
+      };
+    }).filter(feature => feature.geometry); // Ensure geometry exists for a valid GeoJSON Feature
+
+    const geojson = featureCollection(geojsonFeatures); // Use turf's featureCollection helper
+
+    // Create a Blob from the GeoJSON object
+    const blob = new Blob([JSON.stringify(geojson, null, 2)], {
+      type: "application/geo+json",
+    });
+
+    // Create a temporary URL for the Blob and trigger download
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "filtered_features.geojson"; // Suggested filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up the URL
+  };
+
+
   return (
     <>
       <div className="query-bar">
@@ -192,6 +230,16 @@ const AttributeTable = ({ data, fieldTypes }) => {
             >
               Reset
             </button>
+
+            {/* NEW DOWNLOAD BUTTON */}
+            <button
+              className="query-download-btn" // might want to define this CSS class latedr
+              onClick={handleDownloadGeoJSON}
+              disabled={filteredData.length === 0} // Disable if no data
+            >
+              Download GeoJSON ({filteredData.length})
+            </button>
+
           </div>
         </div>
       </div>
