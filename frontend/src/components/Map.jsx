@@ -53,6 +53,7 @@ const Map = ({ activeLayers, onDrawGeometry, highlightedFeatures }) => {
         },
       });
 
+      // attribute popup for point features
       mapRef.current.on("click", `${layerId}-points`, (e) => {
         const props = e.features[0].properties;
         new mapboxgl.Popup()
@@ -72,6 +73,15 @@ const Map = ({ activeLayers, onDrawGeometry, highlightedFeatures }) => {
           "line-width": 2,
         },
       });
+
+      // attribute popup for line features
+      mapRef.current.on("click", `${layerId}-lines`, (e) => {
+        const props = e.features[0].properties;
+        new mapboxgl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
+          .addTo(mapRef.current);
+      });
     }
     if (geometryTypes.has("Polygon")) {
       mapRef.current.addLayer({
@@ -83,6 +93,15 @@ const Map = ({ activeLayers, onDrawGeometry, highlightedFeatures }) => {
           "fill-color": "#ff0000",
           "fill-opacity": 0.35,
         },
+      });
+
+      // attribute popup for polygon features
+      mapRef.current.on("click", `${layerId}-polygons`, (e) => {
+        const props = e.features[0].properties;
+        new mapboxgl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
+          .addTo(mapRef.current);
       });
 
       mapRef.current.addLayer({
