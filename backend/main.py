@@ -51,7 +51,7 @@ def get_available_layers():
 #         cursor.execute("SELECT layer_name FROM layer_metadata")
 #         names = [row[0] for row in cursor.fetchall()]
 #         conn.close()
-#         print(f"[DEBUG] All metadata table layer names: {names}")
+#         print(f"[DEBUG] All metadata metadata_htmlle layer names: {names}")
 #         return names
 #     except Exception as e:
 #         print(f"[ERROR] Could not fetch metadata layer names: {e}")
