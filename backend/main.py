@@ -248,14 +248,21 @@ def get_layer_hierarchy():
     
     hierarchy = {}
     for row in metadata:
-        theme = row["theme"]
-        subtheme = row["subtheme"]
+        theme = row.get("theme", "No Theme")
+        subtheme = row.get("subtheme", "No Subtheme")
+
+        # convert string value of True/False to a boolean
+        is_thematic_str = row.get("is_thematic", "FALSE") # default false
+        # is_thematic_bool = is_thematic_str.lower() == "true" 
+
         entry = {
-            "layer_name": row["layer_name"],
-            "display_name": row["display_name"]
+            # "layer_name": row["layer_name"],
+            # "display_name": row["display_name"],
+            "layer_name": row.get("layer_name"),
+            "display_name": row.get("display_name"),
+            "isThematic": is_thematic_str
         }
         hierarchy.setdefault(theme, {}).setdefault(subtheme, []).append(entry)
-    
     return hierarchy
 
 @app.get("/api/geocode")

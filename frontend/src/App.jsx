@@ -11,14 +11,32 @@ const App = () => {
   const [drawnGeometry, setDrawnGeometry] = useState(null);
   const [spatialQueryResults, setSpatialQueryResults] = useState(null); // For a popup or detailed list
   const [highlightedFeatures, setHighlightedFeatures] = useState(null); // The features to highlight on the map
+  const [activeThematicLayerConfig, setActiveThematicLayerConfig] = useState(null);
+  const [selectedThematicAttribute, setSelectedThematicAttribute] = useState('');
 
-  // Toggle layer visibility
-  const handleLayerToggle = useCallback((layerName) => {
-    setActiveLayers((prev) => ({
+  // Handler to update active layers (already exists)
+  const handleLayerToggle = (layerId, isSelected) => {
+    setActiveLayers(prev => ({
       ...prev,
-      [layerName]: !prev[layerName],
+      [layerId]: isSelected
     }));
-  }, []);
+    // If a layer is deselected, and it was the active thematic layer, clear thematic config
+    if (!isSelected && activeThematicLayerConfig && activeThematicLayerConfig.id === layerId) {
+      setActiveThematicLayerConfig(null);
+      setSelectedThematicAttribute('');
+    }
+  };
+
+  // handler for when Sidebar.jsx tells App.jsx about active thematic layer configuration
+  const handleActiveThematicLayerChange = (config) => {
+    setActiveThematicLayerConfig(config);
+  };
+
+  // handler for when Sidebar.jsx tells App.jsx about the user's selected thematic attribute
+  const handleThematicAttributeChange = (attributeId) => {
+    setSelectedThematicAttribute(attributeId);
+  };
+
 
   // This function receives the geoJSON feature whenever a geometry is drawn, updated, or deleted.
   const handleDrawnGeometry = useCallback(async (geometry) => {
@@ -28,7 +46,7 @@ const App = () => {
       const userSelectedLayers = Object.keys(activeLayers).filter(key => activeLayers[key]);
 
       // first, check if user hasn't even selected any layers
-      if (userSelectedLayers.length === 0) { 
+      if (userSelectedLayers.length === 0) {
         console.warn("No active layers to perform spatial query against.");
         return;
       }
@@ -72,12 +90,19 @@ const App = () => {
 
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
-      <Sidebar activeLayers={activeLayers} onLayerToggle={handleLayerToggle} />
+      <Sidebar
+        onLayerToggle={handleLayerToggle}
+        onThematicAttributeChange={handleThematicAttributeChange}
+        onActiveThematicLayerChange={handleActiveThematicLayerChange}
+      />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Map 
-          activeLayers={activeLayers} 
+        <Map
+          activeLayers={activeLayers}
           onDrawGeometry={handleDrawnGeometry}
           highlightedFeatures={highlightedFeatures}
+          // ADD THESE NEW PROPS:
+          activeThematicLayerConfig={activeThematicLayerConfig}
+          selectedThematicAttribute={selectedThematicAttribute}
         />
       </div>
     </div>

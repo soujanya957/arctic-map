@@ -41,11 +41,18 @@ FIRST=1
 for SHP in *.shp; do
     LAYER=$(basename "$SHP" .shp)
     echo "Importing $SHP as layer $LAYER"
+    for SHP in *.shp; do
+    LAYER=$(basename "$SHP" .shp)
+    echo "Importing $SHP as layer $LAYER"
+
+    for SHP in *.shp; do
+    LAYER=$(basename "$SHP" .shp)
+    echo "Importing $SHP as layer $LAYER"
     if [ $FIRST -eq 1 ]; then
-        ogr2ogr -f SQLite -dsco SPATIALITE=YES "$DB" "$SHP" -nln "$LAYER" -nlt PROMOTE_TO_MULTI -skipfailures 2>>"$LOG"
+        ogr2ogr -f SQLite -dsco SPATIALITE=YES "$DB" "$SHP" -nln "$LAYER" -t_srs EPSG:4326 -nlt PROMOTE_TO_MULTI -skipfailures 2>>"$LOG"
         FIRST=0
     else
-        ogr2ogr -f SQLite -update "$DB" "$SHP" -nln "$LAYER" -nlt PROMOTE_TO_MULTI -skipfailures 2>>"$LOG"
+        ogr2ogr -f SQLite -update "$DB" "$SHP" -nln "$LAYER" -t_srs EPSG:4326 -nlt PROMOTE_TO_MULTI -skipfailures 2>>"$LOG"
     fi
 done
 
