@@ -1,11 +1,11 @@
-// Enhanced AttributeTable.jsx with ArcGIS-style query refinement
 import React, { useState } from "react";
+import "../styles/AttributeTable.css";
 import bboxPolygon from "@turf/bbox-polygon";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import distance from "@turf/distance";
-import { point as turfPoint } from "@turf/helpers";
+import { point as turfPoint, featureCollection} from "@turf/helpers";
 
-const AttributeTable = ({ data, fieldTypes }) => {
+const AttributeTable = ({ data, fieldTypes, layerName}) => {
   const [queryField, setQueryField] = useState("");
   const [queryOperator, setQueryOperator] = useState("");
   const [queryValue, setQueryValue] = useState("");
@@ -98,7 +98,7 @@ const AttributeTable = ({ data, fieldTypes }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "filtered_features.geojson"; // Suggested filename
+    link.download = `${layerName}_filtered.geojson`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

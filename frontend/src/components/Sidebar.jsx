@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
-import "./Sidebar.css";
+import React, { useState, useEffect } from "react";
+import "../styles/Sidebar.css";
 import AttributeTable from "./AttributeTable";
-import SpatialQueryPopup from "./SpatialQueryPopup";
-import ThematicControls from "./ThematicControls";
+// import Metadata from "./Metadata";
+// import SpatialQueryPopup from "./SpatialQueryPopup";
 
 const Popup = ({ title, onClose, children }) => (
   <div className="attribute-popup" role="dialog" aria-modal="true">
@@ -14,174 +14,115 @@ const Popup = ({ title, onClose, children }) => (
   </div>
 );
 
-const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLayerChange }) => {
-  const [layers, setLayers] = useState([]);
-  const [selectedLayers, setSelectedLayers] = useState({});
-  const [openDropdowns, setOpenDropdowns] = useState({});
+const Sidebar = ({ onLayerToggle }) => {
+  const [layers, setLayers] = useState([]); // holds subtheme groups
+  const [selectedLayers, setSelectedLayers] = useState({}); // tracks individal layer checkboxes
+  const [openDropdowns, setOpenDropdowns] = useState({}); // tracks open/closd state of subthemes
   const [attributeData, setAttributeData] = useState([]);
   const [activeLayerForAttributeTable, setActiveLayerForAttributeTable] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [loadingAttributes, setLoadingAttributes] = useState(false);
   const [confirmDownloadLayer, setConfirmDownloadLayer] = useState(null);
   const [showBatchDownloadPopup, setShowBatchDownloadPopup] = useState(false);
-  const [showSpatialQueryPopup, setShowSpatialQueryPopup] = useState(false);
-  const [selectedThematicAttribute, setSelectedThematicAttribute] = useState('');
-  const [activeThematicLayerConfig, setActiveThematicLayerConfig] = useState(null);
+  // const [showSpatialQueryPopup, setShowSpatialQueryPopup] = useState(false);
+
+  // this is the old implementation of populating all the datasets in the sidebar
+  // it's since been updated to rely on a google sheets ordering of datasets
+  //
+  // useEffect(() => {
+  //   // fetch("http://127.0.0.1:8000/api/layers")
+  //   fetch("http://localhost:8000/api/layers")
+  //     .then((res) => res.json())
+  //     .then((data) => {
+  //       if (data.layers) {
+  //         const initialState = {};
+  //         const dropdownState = {};
+  //         data.layers.forEach((layer) => {
+  //           initialState[layer] = false;
+  //           dropdownState[layer] = false;
+  //         });
+  //         setLayers(data.layers);
+  //         setSelectedLayers(initialState);
+  //         setOpenDropdowns(dropdownState);
+  //       }
+  //     })
+  //     .catch((err) => console.error("Failed to fetch layers:", err));
+  // }, []);
 
   useEffect(() => {
     fetch("http://localhost:8000/api/layer_hierarchy")
       .then((res) => res.json())
       .then((data) => {
-        const allLayers = [];
-        const initialState = {};
-        const dropdownState = {};
-
-        // Flatten the theme > subtheme > layers structure
+        const themeGroups = []; // holds themes and each of their subthemes and datasets
+        const initialState = {}; // the user's selected layers
+        const dropdownState = {}; // open/closed state of subtheme dropdowns
+  
         for (const theme in data) {
-          for (const subtheme in data[theme]) {
-            const entries = data[theme][subtheme];
-            for (const entry of entries) {
-              const layerEntry = {
-                theme: theme,
-                subtheme: subtheme,
-                id: entry.layer_name,
-                displayName: entry.display_name,
-                isThematic: entry.isThematic,
-              };
-              allLayers.push(layerEntry);
-              initialState[entry.layer_name] = false;
-              dropdownState[entry.layer_name] = false;
-            }
-          }
-        }
+          const subthemesForCurrentTheme = []; // array that holds subtheme objects for this theme
 
-        setLayers(allLayers);
+          for (const subtheme in data[theme]) {
+            const datasets = data[theme][subtheme];
+            const formattedDatasets = datasets.map(entry => {
+              initialState[entry.layer_name] = false; // initialize all layers as unchecked
+              return {
+                layer_name: entry.layer_name,
+                display_name: entry.display_name,
+                theme: entry.theme,
+                subtheme: entry.subtheme
+              };
+            });
+            
+            // create subtheme group with unque ID using both theme and subtheme names
+            const uniqueSubthemeId = `${theme}-${subtheme}`; 
+
+            subthemesForCurrentTheme.push({
+              id: uniqueSubthemeId,
+              name: subtheme,
+              datasets: formattedDatasets
+            });
+            dropdownState[uniqueSubthemeId] = false; // initialize subtheme dropdowns to be closed
+          }
+
+          // add current theme and its subthemes to main themeGroups array
+          themeGroups.push({
+            id: theme, 
+            name: theme, // display name
+            subthemes: subthemesForCurrentTheme
+          });
+        }
+        setLayers(themeGroups);
         setSelectedLayers(initialState);
         setOpenDropdowns(dropdownState);
       })
       .catch((err) => console.error("Failed to fetch layer hierarchy:", err));
-  }, []);
+  }, []);  
 
   const formatLayerName = (name) =>
     name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const getLayerConfig = useCallback((layerId) => {
-    return layers.find(l => l.id === layerId);
-  }, [layers]);
+  const handleToggle = (layer) => {
+    const updated = {
+      ...selectedLayers,
+      [layer]: !selectedLayers[layer],
+    };
+    setSelectedLayers(updated);
+    onLayerToggle(layer, !selectedLayers[layer]);
+  };
 
-  const handleToggle = useCallback(async (layerId) => {
-    // 1. Immediately determine the new selected state based on current `selectedLayers`
-    const isNowSelected = !selectedLayers[layerId];
-
-    // 2. Synchronously update `selectedLayers` state. This will trigger a re-render
-    //    and update the checkbox's `checked` attribute immediately.
-    setSelectedLayers(prevSelectedLayers => ({
-      ...prevSelectedLayers,
-      [layerId]: isNowSelected,
-    }));
-
-    // 3. Notify parent about layer toggle (this is also synchronous)
-    onLayerToggle(layerId, isNowSelected);
-
-    // 4. Proceed with thematic logic (this part can remain asynchronous)
-    const layerConfig = getLayerConfig(layerId);
-
-    if (layerConfig && layerConfig.isThematic) {
-      if (isNowSelected) {
-        // If a thematic layer is being turned ON
-        try {
-          // Fetch GeoJSON to get properties for thematic attributes
-          const res = await fetch(`http://localhost:8000/api/geojson/${layerId}`);
-          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-          const geojson = await res.json();
-
-          if (!geojson || !geojson.features || geojson.features.length === 0) {
-            console.warn(`GeoJSON for ${layerId} has no features or is malformed.`);
-            setActiveThematicLayerConfig(null);
-            setSelectedThematicAttribute('');
-            onActiveThematicLayerChange(null); // Notify parent
-            onThematicAttributeChange(''); // Notify parent
-            return; // Exit here as no features for thematic processing
-          }
-
-          const attributes = Object.keys(geojson.features[0].properties)
-            .filter(key => {
-              const value = geojson.features[0].properties[key];
-              // YOU MUST CUSTOMIZE THIS FILTER for your 6 raster attributes
-              return !['id', '_id', 'geometry', 'geom', 'type', 'name'].includes(key) &&
-                     (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean');
-            })
-            .map(key => ({
-              id: key,
-              label: key // Use raw attribute name. Customize if you want friendly labels.
-            }));
-
-          if (attributes.length > 0) {
-            const newThematicConfig = {
-              id: layerId,
-              displayName: layerConfig.displayName,
-              thematicAttributes: attributes
-            };
-            setActiveThematicLayerConfig(newThematicConfig);
-            setSelectedThematicAttribute(attributes[0].id); // Select the first attribute by default
-
-            // Notify parent (App.jsx) about the active thematic layer and selected attribute
-            onActiveThematicLayerChange(newThematicConfig);
-            onThematicAttributeChange(attributes[0].id);
-          } else {
-            setActiveThematicLayerConfig(null);
-            setSelectedThematicAttribute('');
-            onActiveThematicLayerChange(null);
-            onThematicAttributeChange('');
-            console.warn(`No suitable thematic attributes found for ${layerId}.`);
-          }
-
-        } catch (error) {
-          console.error(`Failed to load thematic attributes for ${layerId}:`, error);
-          setActiveThematicLayerConfig(null);
-          setSelectedThematicAttribute('');
-          onActiveThematicLayerChange(null);
-          onThematicAttributeChange('');
-        }
-      } else {
-        // If the thematic layer is being turned OFF
-        setActiveThematicLayerConfig(null);
-        setSelectedThematicAttribute('');
-        onActiveThematicLayerChange(null); // Notify parent
-        onThematicAttributeChange(''); // Notify parent
-      }
-    } else if (!isNowSelected && activeThematicLayerConfig && activeThematicLayerConfig.id === layerId) {
-        // Edge case: if a non-thematic layer was somehow tracked as activeThematicLayerId, clear it.
-        // This should ideally not happen if isThematic check is correct, but for robustness.
-        setActiveThematicLayerConfig(null);
-        setSelectedThematicAttribute('');
-        onActiveThematicLayerChange(null);
-        onThematicAttributeChange('');
-    }
-  }, [selectedLayers, getLayerConfig, onLayerToggle, onThematicAttributeChange, onActiveThematicLayerChange, activeThematicLayerConfig]); // Dependencies updated to include `selectedLayers`
-
-
-  const toggleDropdown = (layerId) => {
+  const toggleDropdown = (subtheme) => {
     setOpenDropdowns((prev) => ({
       ...prev,
-      [layerId]: !prev[layerId],
+      [subtheme]: !prev[subtheme],
     }));
   };
 
-  // handles thematic attribute dropdown change
-  const handleThematicAttributeChange = (event) => {
-    const newAttribute = event.target.value;
-    setSelectedThematicAttribute(newAttribute);
-    onThematicAttributeChange(newAttribute);
-  };
-
-  const handleViewAttributes = (layerId) => {
+  const handleViewAttributes = (layer) => {
     setLoadingAttributes(true);
-    fetch(`http://localhost:8000/api/geojson/${layerId}`)
+    fetch(`http://localhost:8000/api/geojson/${layer}`)
       .then((res) => res.json())
       .then((geojson) => {
-        // FIX: Changed '==' to '===' for strict equality comparison
-        if (geojson && geojson.type === "FeatureCollection" && geojson.features && geojson.features.length > 0) {
+
+        if (geojson && geojson.type == "FeatureCollection" && geojson.features && geojson.features.length > 0) {
           const attributes = geojson.features.map((feature) => ({
             ...feature.properties,
             geometry: feature.geometry,
@@ -190,8 +131,7 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
         } else {
           setAttributeData([]);
         }
-        // FIX: Use activeLayerForAttributeTable here
-        setActiveLayerForAttributeTable(layerId);
+        setActiveLayerForAttributeTable(layer);
         setShowPopup(true);
         setLoadingAttributes(false);
       })
@@ -203,10 +143,28 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
       });
   };
 
-  const handleDownloadShp = (layerId) => {
+  // Handle "Meta data" click
+  // const handleViewMetadata = (layer) => {
+  //   setLoadingMetadata(true);
+  //   setMetadataLayer(formatLayerName(layer));
+  //   fetch(`http://localhost:8000/api/geojson/${layer}`)
+  //     .then((res) => res.json())
+  //     .then((data) => {
+  //       setMetadataContent(data.metadata || "No metadata found.");
+  //       setShowMetadataPopup(true);
+  //       setLoadingMetadata(false);
+  //     })
+  //     .catch((err) => {
+  //       setMetadataContent("Failed to load metadata.");
+  //       setShowMetadataPopup(true);
+  //       setLoadingMetadata(false);
+  //     });
+  // };
+
+  const handleDownloadShp = (layer) => {
     const link = document.createElement("a");
-    link.href = `http://localhost:8001/api/shapefiles/${layerId}.zip`;
-    link.download = `${layerId}.zip`;
+    link.href = `http://localhost:8001/api/shapefiles/${layer}.zip`;
+    link.download = `${layer}.zip`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -230,7 +188,6 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     setShowBatchDownloadPopup(false);
   };
 
@@ -261,7 +218,7 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
   return (
     <div className="sidebar">
       <div className="sidebar-content">
-        <h2>Layers</h2>
+        <h2>Dataset Layers</h2>
         {/* <button
           className="spatial-query-btn"
           style={{ marginBottom: "1em" }}
@@ -269,80 +226,61 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
         >
           Spatial Queries
         </button> */}
-        {layers.length === 0 ? (
-          <p>No layers available.</p>
-        ) : (
-          Object.entries(
-            layers.reduce((acc, layer) => {
-              if (!acc[layer.theme]) acc[layer.theme] = {};
-              if (!acc[layer.theme][layer.subtheme]) acc[layer.theme][layer.subtheme] = [];
-              acc[layer.theme][layer.subtheme].push(layer);
-              return acc;
-            }, {})
-          ).map(([theme, subthemes]) => (
-            <div key={theme}>
-              <h3>{theme}</h3>
-              {Object.entries(subthemes).map(([subtheme, layerEntries]) => (
-                <div key={subtheme}>
-                  <h4>{subtheme}</h4>
-                  <ul className="layer-list">
-                    {layerEntries.map((layer) => (
-                      <li key={layer.id} className="layer-item">
-                        <div className="layer-header">
+        <ul className="layer-list">
+          {layers.map((themeGroup) => ( 
+            <li key={themeGroup.id} className="theme-item">
+              <h3 className="theme-header">{formatLayerName(themeGroup.name)}</h3>
+              <ul className="subtheme-list">
+                {themeGroup.subthemes.map((subthemeGroup) => (
+                  <li key={subthemeGroup.id} className="subtheme-item"> 
+                    <div 
+                      className="layer-group-header"
+                      onClick={() => toggleDropdown(subthemeGroup.id)} 
+                    >
+                      <h3>{formatLayerName(subthemeGroup.name)}</h3>
+                      <span className={`collapse-icon ${openDropdowns[subthemeGroup.id]}`}
+                      >
+                        {openDropdowns[subthemeGroup.id] ? "▼" : "▶"} 
+                      </span>
+                    </div>
+                    {openDropdowns[subthemeGroup.id] && (
+                      <ul className="subtheme-dataset-list">
+                        {subthemeGroup.datasets.map((dataset) => (
+                        <li key={dataset.layer_name} className="dataset-item-row">
                           <label>
-                            <input
-                              type="checkbox"
-                              checked={selectedLayers[layer.id] || false}
-                              onChange={() => handleToggle(layer.id)}
-                            />
-                            {layer.displayName}
+                          <input
+                            type="checkbox"
+                            checked={selectedLayers[dataset.layer_name] || false}
+                            onChange={() => handleToggle(dataset.layer_name)}
+                          />
+                          {dataset.display_name}
                           </label>
-                          <button
-                            className={`dropdown-toggle ${openDropdowns[layer.id] ? "open" : ""}`}
-                            onClick={() => toggleDropdown(layer.id)}
-                            aria-label="Toggle layer options"
-                          >
-                            {openDropdowns[layer.id] ? "▲" : "▼"}
-                          </button>
-                        </div>
-                        {openDropdowns[layer.id] && (
-                          <ul className="dropdown-menu">
-                            <li onClick={() => handleViewAttributes(layer.id)}>
-                              View Attribute Table
-                            </li>
-                            <li onClick={() => setConfirmDownloadLayer(layer.id)}>
-                              Download SHP File
-                            </li>
-                            <li
-                              onClick={() =>
-                                window.open(`http://localhost:8000/api/metadata_html/${layer.id}`, "_blank")
-                              }
-                            >
+                          <div className="layer-actions-below">
+                            <button onClick={() => handleViewAttributes(dataset.layer_name)}>
+                              View Attributes
+                            </button>
+                            <button onClick={() => setConfirmDownloadLayer(dataset.layer_name)}>
+                              Download
+                            </button>
+                            <button onClick={() => window.open(`http://localhost:8000/api/metadata_html/${dataset.layer_name}`, "_blank")}>
                               View Metadata
-                            </li>
-                            {/* Thematic controls for enriched hexagon layer for raster data */}
-                            {layer.isThematic && selectedLayers[layer.id] && activeThematicLayerConfig?.id === layer.id && (
-                                <ThematicControls
-                                  activeThematicLayerConfig={activeThematicLayerConfig}
-                                  selectedThematicAttribute={selectedThematicAttribute}
-                                  onThematicAttributeChange={handleThematicAttributeChange}
-                                />
-                            )}
-                          </ul>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ))
-        )}
-
-        <button className="download-all-btn" onClick={handleDownloadAll}>
-          ⬇ Download Selected Layers
-        </button>
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
       </div>
+
+      <button className="download-all-btn" onClick={handleDownloadAll}>
+        ⬇ Download All Selected Layers
+      </button>
 
       {showPopup && (
         <Popup
@@ -352,7 +290,7 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
           {loadingAttributes ? (
             <p>Loading attributes...</p>
           ) : (
-            <AttributeTable data={attributeData} fieldTypes={fieldTypes} />
+            <AttributeTable data={attributeData} fieldTypes={fieldTypes} layerName={activeLayerForAttributeTable}/>
           )}
         </Popup>
       )}
@@ -398,10 +336,19 @@ const Sidebar = ({ onLayerToggle, onThematicAttributeChange, onActiveThematicLay
         </Popup>
       )}
 
+      {/* Metadata popup
+      <Metadata
+        open={showMetadataPopup}
+        onClose={() => setShowMetadataPopup(false)}
+        layerName={metadataLayer}
+        metadata={metadataContent}
+        loading={loadingMetadata}
+      /> */}
+
       {/* Spatial Query popup */}
-      {showSpatialQueryPopup && (
+      {/* {showSpatialQueryPopup && (
         <SpatialQueryPopup onClose={() => setShowSpatialQueryPopup(false)} />
-      )}
+      )} */}
     </div>
   );
 };

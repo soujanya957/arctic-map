@@ -1,0 +1,112 @@
+.query-bar {
+    display: flex;
+    flex-wrap: wrap; /* Allows items to wrap to the next line */
+    gap: 10px; /* Space between query groups */
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    align-items: flex-end; /* Aligns items to the bottom if they have different heights */
+}
+  
+.query-group {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 200 px; 
+    min-width: 120px; /* Minimum width for each group before wrapping */
+}
+
+.query-group label {
+font-size: 13px;
+color: #555;
+margin-bottom: 4px;
+font-weight: bold;
+}
+
+.query-group select,
+.query-group input[type="text"],
+.query-group input[type="number"] {
+padding: 8px;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-size: 14px;
+width: 100%; /* Make input/select fill its container */
+box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.query-submit-btn,
+.query-reset-btn,
+.query-download-btn {
+padding: 8px 12px;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 14px;
+font-weight: bold;
+transition: background-color 0.2s ease;
+white-space: nowrap; /* Prevent button text from wrapping */
+background-color: #007bff;
+color: white;
+}
+
+.query-submit-btn:hover:not(:disabled),
+.query-reset-btn:hover:not(:disabled),
+.query-download-btn:hover:not(:disabled) {
+background-color: #0056b3;
+}
+
+.table-container {
+overflow-x: auto; /* Allows horizontal scrolling for large tables */
+margin-top: 16px;
+border: 1px solid #ddd; /* Add border to table container */
+border-radius: 5px;
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+font-size: 13px;
+background-color: #fff;
+/* Removed border from table itself, now on container */
+table-layout: auto; /* Columns adjust to content */
+}
+
+th,
+td {
+padding: 8px 10px;
+border: 1px solid #eee; /* Lighter borders for cells */
+text-align: left;
+vertical-align: top;
+white-space: normal;
+word-wrap: break-word; /* Allows long words to break */
+}
+
+th {
+background-color: #f5f5f5;
+font-weight: 600;
+color: #333;
+position: sticky; /* Make header sticky when scrolling */
+top: 0;
+z-index: 1; /* Ensure header stays above scrolled content */
+}
+
+td {
+color: #555;
+}
+
+tr:nth-child(even) {
+background-color: #f9f9f9; /* Zebra striping for readability */
+}
+
+tr:hover {
+background-color: #f0f0f0; /* Highlight row on hover */
+}
+
+.empty-message {
+font-size: 14px;
+color: #888;
+text-align: center;
+padding: 20px;
+background-color: #fff;
+}

@@ -1,5 +1,3 @@
-/* Sidebar.css */
-
 .sidebar {
   width: 320px;
   background-color: #ffffff;
@@ -25,7 +23,7 @@
   padding-bottom: 8px;
 }
 
-.spatial-query-btn {
+/* .spatial-query-btn {
   width: 100%;
   padding: 0.5em;
   margin-bottom: 1em;
@@ -39,6 +37,41 @@
 }
 .spatial-query-btn:hover {
   background: #1565c0;
+} */
+
+/* New styles for Theme items */
+.theme-item {
+  margin-bottom: 20px; /* Space between different themes */
+  border-bottom: 1px solid #eee; /* Optional: Separator for themes */
+  padding-bottom: 15px; /* Space before separator */
+}
+
+.theme-item:last-child {
+  border-bottom: none; /* No separator for the last theme */
+  margin-bottom: 0;
+}
+
+.theme-header {
+  font-size: 18px; 
+  font-weight: bold;
+  color: #0077cc; 
+  margin-top: 0;
+  margin-bottom: 10px; /* Space between theme header and its subthemes */
+  padding-bottom: 5px;
+  /* border-bottom: 2px solid #1976d2; Optional underline for theme header */
+}
+
+/* New wrapper list for subthemes within a theme */
+.subtheme-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  margin-left: 10px; /* Indent subthemes slightly under the theme */
+}
+
+/* Subtheme item (replaces the old .layer-item if you want distinct styling) */
+.subtheme-item {
+  margin-bottom: 8px; /* Space between subthemes */
 }
 
 .layer-list {
@@ -51,6 +84,110 @@
   margin-bottom: 12px;
 }
 
+/* Header for each subtheme group */
+.layer-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  background-color: #f0f0f0; /* Light background for subtheme headers */
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+
+.layer-group-header h3 {
+  margin: 0; /* Remove default margin from h3 */
+  font-size: 16px; /* Adjust font size as needed */
+  color: #333;
+}
+
+/* Toggle icon for subthemes */
+.collapse-icon {
+  margin-left: 10px;
+  font-size: 10px;
+  transition: transform 0.2s ease;
+  color: #555; /* Color for the toggle icon */
+}
+
+/* List of datasets under each subtheme */
+.subtheme-dataset-list {
+  list-style: none; /* Removes bullet points */
+  padding: 0; 
+  margin-left: 5px; /* Indent the dataset list */
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.subtheme-dataset-list .dataset-item-row {
+  margin-bottom: 15px; /* Spacing between dataset items */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.subtheme-dataset-list label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.subtheme-dataset-list input[type="checkbox"] {
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: white;
+  border: 2px solid black;
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.subtheme-dataset-list input[type="checkbox"]:checked::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 10px;
+  border: solid black;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* styling for each dataset layer's view attributes, download, and view metadata */
+.layer-actions-below {
+  display: flex; /* Makes the buttons appear in a row */
+  flex-direction: row; 
+  gap: 5px; /* Space between buttons */
+  margin-left: 26px; /* Indent buttons to align with text, accounting for checkbox */
+  align-items: center; /* Vertically align buttons */
+}
+
+.layer-actions-below button {
+  background-color: #e7e7e7;
+  border: 1px solid #ccc;
+  padding: 3px 6px; /* Smaller padding for smaller buttons */
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px; /* Smaller font size for buttons */
+  white-space: nowrap; /* Prevent button text from wrapping */
+}
+
+.layer-actions button:hover {
+  background-color: #dcdcdc;
+}
+
+/* Old .layer-header styles, might not be needed depending on usage */
 .layer-header {
   display: flex;
   justify-content: space-between;
@@ -94,7 +231,8 @@
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
-/* Dropdown toggle icon using CSS chevron */
+/* Dropdown toggle icon using CSS chevron - commented out */
+/*
 .dropdown-toggle {
   background: none;
   border: none;
@@ -108,7 +246,7 @@
   transition: transform 0.3s ease;
 }
 
-/* .dropdown-toggle::before {
+.dropdown-toggle::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -123,7 +261,8 @@
 
 .dropdown-toggle.open::before {
   transform: translate(-50%, -50%) rotate(-135deg);
-} */
+}
+*/
 
 .dropdown-menu {
   margin-top: 6px;
@@ -204,7 +343,6 @@
     height: 100vh;
     max-height: 100vh;
   }
-
   .attribute-popup {
     align-items: flex-start;
   }
@@ -212,72 +350,72 @@
 
 .popup-content h3 {
   color: #333;
-  font-size: 18px;
-  margin-bottom: 12px;
+  font-size: 20px;
+  margin-top: 0;
+  margin-bottom: 15px;
+  padding-right: 30px; /* Make space for close button */
 }
 
-.popup-content p {
-  font-size: 14px;
-  color: #444;
-  margin-bottom: 16px;
+.popup-content .close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+  line-height: 1;
 }
 
-.popup-content ul {
-  padding-left: 20px;
-  margin-bottom: 16px;
-}
-
-.popup-content ul li {
-  font-size: 14px;
+.popup-content .close-btn:hover {
   color: #333;
-  margin-bottom: 6px;
 }
 
-.popup-content .button-row {
+.button-row {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
 }
 
-.popup-content button {
-  padding: 8px 14px;
-  font-size: 14px;
+.button-row button {
+  padding: 8px 16px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-.popup-content button:hover {
-  opacity: 0.9;
+.button-row button:first-child {
+  background-color: #f0f0f0;
+  color: #555;
 }
 
-.popup-content button:first-of-type {
-  background-color: #ccc;
-  color: #333;
+.button-row button:first-child:hover {
+  background-color: #e0e0e0;
 }
 
-.popup-content button:last-of-type {
-  background-color: #0077cc;
+.button-row button:last-child {
+  background-color: #007bff;
   color: white;
 }
 
-.close-btn {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #888;
+.button-row button:last-child:hover {
+  background-color: #0056b3;
 }
 
-.close-btn:hover {
-  color: #000;
+.button-row button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  color: #666666;
 }
 
-/* Query bar above table */
+/* Query bar above attribute table */
 .query-bar {
   margin-bottom: 12px;
 }
@@ -335,48 +473,7 @@ td {
     width: 90vw;
     min-width: unset;
     border-radius: 0;
-    height: 95vh;
-    max-height: 95vh;
+    height: 100vh;
+    max-height: 100vh;
   }
-
-  .attribute-popup {
-    align-items: flex-start;
-  }
-}
-
-.query-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
-  align-items: flex-end;
-}
-
-.query-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 160px;
-}
-
-.query-group label {
-  font-size: 13px;
-  color: #555;
-  margin-bottom: 4px;
-}
-
-.query-group select,
-.query-group input {
-  padding: 6px 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.popup-content,
-.popup-content input,
-.popup-content select,
-.popup-content textarea,
-.popup-content label {
-  color: #222 !important;
-  background: #fff;
 }

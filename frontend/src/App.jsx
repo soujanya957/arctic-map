@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import Map from "./components/Map";
 import Sidebar from "./components/Sidebar";
-import "./components/Sidebar.css";
+import "./styles/Sidebar.css";
 
 const App = () => {
   // Track which layers are active

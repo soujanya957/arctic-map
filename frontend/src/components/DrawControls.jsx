@@ -62,7 +62,7 @@ const DrawControls = ({ map, onDrawGeometry }) => {
           zIndex: 10,
           background: drawMode ? '#1976d2' : '#f7f7f7',
           color: drawMode ? '#fff' : '#1976d2',
-          border: '1.5px solid #1976d2',
+          border: '1.5px solid#1976d2',
           borderRadius: 5,
           padding: '7px 14px',
           fontWeight: 500,
