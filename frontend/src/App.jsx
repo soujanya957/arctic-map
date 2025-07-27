@@ -1,44 +1,33 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 import Map from "./components/Map";
+// import ThematicMap from "./components/ThematicMap";
 import Sidebar from "./components/Sidebar";
 import "./styles/Sidebar.css";
 
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+
 const App = () => {
-  // Track which layers are active
-  const [activeLayers, setActiveLayers] = useState({});
+  const [mapboxMap, setMapboxMap] = useState(null);
+  const mapContainerRef = useRef(null);
+
+  const [activeLayers, setActiveLayers] = useState({}); // Track which layers are active
 
   // State to hold the geometry drawn by the user on the map
   const [drawnGeometry, setDrawnGeometry] = useState(null);
-  const [spatialQueryResults, setSpatialQueryResults] = useState(null); // For a popup or detailed list
   const [highlightedFeatures, setHighlightedFeatures] = useState(null); // The features to highlight on the map
-  const [activeThematicLayerConfig, setActiveThematicLayerConfig] = useState(null);
-  const [selectedThematicAttribute, setSelectedThematicAttribute] = useState('');
+  const [spatialQueryResults, setSpatialQueryResults] = useState(null); // For a popup or detailed list
 
   // Handler to update active layers (already exists)
-  const handleLayerToggle = (layerId, isSelected) => {
+  const handleLayerToggle = useCallback((layerId, isSelected) => {
     setActiveLayers(prev => ({
       ...prev,
       [layerId]: isSelected
     }));
-    // If a layer is deselected, and it was the active thematic layer, clear thematic config
-    if (!isSelected && activeThematicLayerConfig && activeThematicLayerConfig.id === layerId) {
-      setActiveThematicLayerConfig(null);
-      setSelectedThematicAttribute('');
-    }
-  };
+  }, []);
 
-  // handler for when Sidebar.jsx tells App.jsx about active thematic layer configuration
-  const handleActiveThematicLayerChange = (config) => {
-    setActiveThematicLayerConfig(config);
-  };
-
-  // handler for when Sidebar.jsx tells App.jsx about the user's selected thematic attribute
-  const handleThematicAttributeChange = (attributeId) => {
-    setSelectedThematicAttribute(attributeId);
-  };
-
-
-  // This function receives the geoJSON feature whenever a geometry is drawn, updated, or deleted.
+  // receives the geoJSON feature whenever a geometry is drawn, updated, or deleted.
   const handleDrawnGeometry = useCallback(async (geometry) => {
     setDrawnGeometry(geometry); // Store the user's drawn geometry in App's state
 
@@ -88,22 +77,87 @@ const App = () => {
     }
   }, [activeLayers]);
 
+  // Initialize Mapbox map instance
+  useEffect(() => {
+    // Only initialize if the map container ref is available AND map hasn't been initialized yet
+    if (mapContainerRef.current && !mapboxMap) {
+      console.log("App.jsx: Initializing Mapbox map into mapContainerRef.");
+
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current, 
+        style: "mapbox://styles/mapbox/streets-v11", 
+        center: [-160, 75],
+        zoom: 3.35,
+        projection: "globe", // Use 'globe' for a global view effect
+      });
+
+      map.on('load', () => {
+        console.log("App.jsx: Map 'load' event fired. Setting mapboxMap state.");
+        // Set fog for globe projection (optional)
+        map.setFog({
+          color: "white",
+          "high-color": "#add8e6",
+          "horizon-blend": 0.2,
+          "space-color": "#000000",
+          "star-intensity": 0.15,
+        });
+        setMapboxMap(map); // This will trigger a re-render of App and its children
+      });
+
+      map.on('error', (e) => {
+        console.error("App.jsx: Mapbox Map Error Event Caught:", e);
+        setMapboxMap(null); // Reset map state on error
+      });
+
+      // Cleanup function: remove map instance when component unmounts
+      return () => {
+        if (map) {
+          console.log("App.jsx: Cleanup function running. Removing map instance.");
+          map.remove();
+          setMapboxMap(null); // Ensure state is reset on cleanup
+        }
+      };
+    }
+  }, []);
+
+
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
+    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: 'hidden'}}>
       <Sidebar
         onLayerToggle={handleLayerToggle}
-        onThematicAttributeChange={handleThematicAttributeChange}
-        onActiveThematicLayerChange={handleActiveThematicLayerChange}
       />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Map
-          activeLayers={activeLayers}
-          onDrawGeometry={handleDrawnGeometry}
-          highlightedFeatures={highlightedFeatures}
-          // ADD THESE NEW PROPS:
-          activeThematicLayerConfig={activeThematicLayerConfig}
-          selectedThematicAttribute={selectedThematicAttribute}
+
+      {/* Main Map Area Container */}
+      <div style={{ flexGrow: 1, height: '100%', position: 'relative' }}>
+        <div
+          ref={mapContainerRef}
+          style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
         />
+        
+        {/* Conditional rendering for loading message OR the map UI components */}
+        {!mapboxMap ? (
+          // Show loading message ON TOP of the empty map container
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)', // Semi-transparent white overlay
+            zIndex: 999, // Ensure it's above the map canvas
+            color: 'black',
+            fontSize: '1.5em',
+          }}>
+            Loading map...
+          </div>
+        ) : (
+          <Map
+            mapboxMap={mapboxMap} // pass map instance to map.jsx
+            activeLayers={activeLayers}
+            onDrawGeometry={handleDrawnGeometry}
+            highlightedFeatures={highlightedFeatures}
+          />
+        )}
       </div>
     </div>
   );

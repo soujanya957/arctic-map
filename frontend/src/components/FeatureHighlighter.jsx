@@ -83,7 +83,7 @@ const FeatureHighlighter = ({ mapboxMap, highlightedFeatures }) => {
         highlightLayerPolygonId,
         highlightLayerPolygonOutlineId
       ].forEach(id => {
-        if (mapboxMap.getLayer(id)) mapboxMap.removeLayer(id);
+        if (mapboxMap && mapboxMap.getLayer(id)) mapboxMap.removeLayer(id);
       });
       if (mapboxMap.getSource(highlightSourceId)) mapboxMap.removeSource(highlightSourceId);
     }
@@ -97,9 +97,9 @@ const FeatureHighlighter = ({ mapboxMap, highlightedFeatures }) => {
           highlightLayerPolygonId,
           highlightLayerPolygonOutlineId
         ].forEach(id => {
-          if (mapboxMap.getLayer(id)) mapboxMap.removeLayer(id);
+          if (mapboxMap && mapboxMap.getLayer(id)) mapboxMap.removeLayer(id);
         });
-        if (mapboxMap.getSource(highlightSourceId)) mapboxMap.removeSource(highlightSourceId);
+        if (mapboxMap && mapboxMap.getSource(highlightSourceId)) mapboxMap.removeSource(highlightSourceId);
       }
     };
 
