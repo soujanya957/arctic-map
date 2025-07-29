@@ -331,21 +331,24 @@ const Map = ({
   }, [activeLayers, addLayerToMap, removeLayerFromMap, mapboxMap]);
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}>
-      
-      {/* User interface controls */}
-      {mapboxMap && <SearchBar map={mapboxMap} style={{ pointerEvents: 'auto' }} />}
-      {mapboxMap && <DrawControls map={mapboxMap} onDrawGeometry={onDrawGeometry} style={{ pointerEvents: 'auto' }} />}
+    <>
+      {/* User interface controls - Position them individually */}
+      {mapboxMap && (
+          <SearchBar map={mapboxMap} />
+      )}
 
-      {/* Highlighting features */}
+      {mapboxMap && (
+          <DrawControls map={mapboxMap} onDrawGeometry={onDrawGeometry} />
+      )}
+
+      {/* Highlighting features - This component doesn't render any visible UI, it just adds map layers */}
       {mapboxMap && <FeatureHighlighter mapboxMap={mapboxMap} highlightedFeatures={highlightedFeatures} />}
 
       {/* Spatial query results and download panel */}
       {mapboxMap && highlightedFeatures && highlightedFeatures.length > 0 && (
-        <SpatialQueryPanel highlightedFeatures={highlightedFeatures} style={{ pointerEvents: 'auto' }}/>
+          <SpatialQueryPanel highlightedFeatures={highlightedFeatures} />
       )}
-
-    </div>
+    </>
   );
 };
 

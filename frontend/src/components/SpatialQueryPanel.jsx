@@ -75,7 +75,7 @@ const SpatialQueryPanel = ({ highlightedFeatures }) => {
               <button
                 onClick={() => handleDownload(layerName)}
                 style={{
-                  marginLeft: '10px',
+                  marginLeft: '0px',
                   padding: '5px 10px',
                   backgroundColor: '#007bff',
                   color: 'white',
@@ -84,7 +84,7 @@ const SpatialQueryPanel = ({ highlightedFeatures }) => {
                   cursor: 'pointer'
                 }}
               >
-                Download
+                Download GeoJSON
               </button>
             </li>
           ))}
