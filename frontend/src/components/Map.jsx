@@ -6,7 +6,6 @@ import SearchBar from './SearchBar';
 import DrawControls from './DrawControls';
 import SpatialQueryPanel from './SpatialQueryPanel';
 
-// these are the props sent by App.jsx
 const Map = ({
   mapboxMap,
   activeLayers,
@@ -15,156 +14,6 @@ const Map = ({
 }) => {
 
   const loadingLayers = useRef(new Set());
-
-//   // Function to apply styling (default or thematic)
-//   const applyLayerStyling = useCallback((map, layerName, sourceId, layerId, geojson, thematicAttribute = null) => {
-//     console.log(`Applying styling for layer: ${layerName}, Thematic Attribute: ${thematicAttribute}`);
-//     console.log(`GeoJSON features count in applyLayerStyling: ${geojson.features.length}`);
-
-//     // Remove existing layers first to ensure fresh styling
-//     ["points", "lines", "polygons", "outline"].forEach((type) => {
-//       const id = `${layerId}-${type}`;
-//       if (map.getLayer(id)) {
-//         map.removeLayer(id);
-//         console.log(`Removed existing layer: ${id}`);
-//       }
-//     });
-
-//     let thematicExpression = null; // Will hold the Mapbox GL JS expression for thematic styling
-
-//     if (thematicAttribute && geojson && geojson.features.length > 0) {
-//       const numericValues = geojson.features
-//         .map(f => f.properties?.[thematicAttribute])
-//         .filter(val => typeof val === 'number' && !isNaN(val)); // Filter out non-numeric or NaN values
-
-//       console.log(`Thematic attribute '${thematicAttribute}' numeric values count: ${numericValues.length}`);
-
-//       if (numericValues.length > 0) {
-//         const minVal = Math.min(...numericValues);
-//         const maxVal = Math.max(...numericValues);
-
-//         console.log(`MinVal: ${minVal}, MaxVal: ${maxVal}`);
-
-//         if (minVal !== maxVal) { // Only create interpolate expression if there's a range of values
-//           thematicExpression = [
-//             'interpolate',
-//             ['linear'],
-//             ['get', thematicAttribute],
-//             minVal, '#00FF00', // Green for min value
-//             maxVal, '#FF0000'  // Red for max value
-//           ];
-//         } else {
-//             // If all numeric values are the same, use a single color, e.g., the min value color
-//             thematicExpression = ['case', ['has', thematicAttribute], '#00FF00', '#808080']; // Green if attribute exists, gray otherwise
-//         }
-//       }
-//     }
-//     console.log(`Final thematicExpression for ${layerName}:`, thematicExpression);
-
-//     // Default colors if no thematic or problematic thematic data
-//     const defaultPointColor = "#ff6600"; // Orange
-//     const defaultLineColor = "#0000ff"; // Blue
-//     const defaultFillColor = "#ff0000"; // Red (with opacity)
-//     const defaultOutlineColor = "#000000"; // Black
-
-//     const geometryTypes = new Set(
-//       geojson.features.map((f) => f.geometry?.type)
-//     );
-
-//     // Add layers with calculated styling (thematicExpression or default)
-//     if (geometryTypes.has("Point") || geometryTypes.has("MultiPoint")) {
-//       map.addLayer({
-//         id: `${layerId}-points`,
-//         type: "circle",
-//         source: sourceId,
-//         filter: ["==", "$type", "Point"], // RE-ENABLED FILTER
-//         paint: {
-//           "circle-radius": 5, // BACK TO DEFAULT SIZE
-//           "circle-color": thematicExpression || defaultPointColor, // RE-ENABLED THEMATIC
-//         },
-//       });
-//       // RE-ENABLED CLICK HANDLER
-//       map.on("click", `${layerId}-points`, (e) => {
-//         const props = e.features[0].properties;
-//         new mapboxgl.Popup()
-//           .setLngLat(e.lngLat)
-//           .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-//           .addTo(map);
-//       });
-//     }
-
-//     if (geometryTypes.has("LineString") || geometryTypes.has("MultiLineString")) {
-//       map.addLayer({
-//         id: `${layerId}-lines`,
-//         type: "line",
-//         source: sourceId,
-//         filter: ["==", "$type", "LineString"], 
-//         paint: {
-//           "line-color": thematicExpression || defaultLineColor, 
-//           "line-width": 2, 
-//         },
-//       });
-//       // RE-ENABLED CLICK HANDLER
-//       map.on("click", `${layerId}-lines`, (e) => {
-//         const props = e.features[0].properties;
-//         new mapboxgl.Popup()
-//           .setLngLat(e.lngLat)
-//           .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-//           .addTo(map);
-//       });
-//     }
-
-//     if (geometryTypes.has("Polygon") || geometryTypes.has("MultiPolygon")) {
-//       map.addLayer({
-//         id: `${layerId}-polygons`,
-//         type: "fill",
-//         source: sourceId,
-//         filter: ["==", "$type", "Polygon"], 
-//         paint: {
-//           "fill-color": thematicExpression || defaultFillColor, 
-//           "fill-opacity": 0.35, 
-//         },
-//       });
-//       // RE-ENABLED CLICK HANDLER
-//       map.on("click", `${layerId}-polygons`, (e) => {
-//         const props = e.features[0].properties;
-//         new mapboxgl.Popup()
-//           .setLngLat(e.lngLat)
-//           .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-//           .addTo(map);
-//       });
-
-//       map.addLayer({
-//         id: `${layerId}-outline`,
-//         type: "line",
-//         source: sourceId,
-//         filter: ["==", "$type", "Polygon"], 
-//         paint: {
-//           "line-color": defaultOutlineColor, // Outline can remain black
-//           "line-width": 1,
-//         },
-//       });
-//     }
-
-//     // fit bounds
-//     const bounds = new mapboxgl.LngLatBounds();
-//     geojson.features.forEach((feature) => {
-//       const { type, coordinates } = feature.geometry;
-//       if (type === "Point" || type === "MultiPoint") {
-//         if (type === "Point") bounds.extend(coordinates);
-//         else coordinates.forEach((coord) => bounds.extend(coord));
-//       } else if (type === "LineString" || type === "MultiLineString") {
-//         if (type === "LineString") coordinates.forEach((coord) => bounds.extend(coord));
-//         else coordinates.forEach((line) => line.forEach((coord) => bounds.extend(coord)));
-//       } else if (type === "Polygon" || type === "MultiPolygon") {
-//         if (type === "Polygon") coordinates.forEach((polygon) => polygon.forEach((ring) => ring.forEach((coord) => bounds.extend(coord))));
-//       }
-//     });
-//     if (!bounds.isEmpty()) {
-//       map.fitBounds(bounds, { padding: 20 });
-//     }
-// }, []); 
-
 
   const addLayerToMap = useCallback((layerName, geojson) => {
     if (!mapboxMap) {
@@ -279,6 +128,7 @@ const Map = ({
   }, [mapboxMap]);
 
 
+  // when users uncheck layers
   const removeLayerFromMap = useCallback((layerName) => {
     if (!mapboxMap) return;
 
@@ -298,7 +148,7 @@ const Map = ({
     }
   }, [mapboxMap]);
 
-  // managing active data layers in sidebar
+  // manages active data layers in sidebar
   useEffect(() => {
     if (!mapboxMap) return;
 
@@ -328,6 +178,43 @@ const Map = ({
         removeLayerFromMap(layerName);
       }
     });
+
+    // Cleanup function when Map.jsx component unmounts
+    return () => {
+      if (mapboxMap) {
+        // Iterate over ALL active layers and ensure they are removed from the map
+        const layerIdsToRemove = new Set();
+        const sourceIdsToRemove = new Set();
+
+        // Collect IDs based on the naming convention used by this component
+        Object.keys(activeLayers).forEach(layerName => {
+          layerIdsToRemove.add(`layer-${layerName}-polygons`);
+          layerIdsToRemove.add(`layer-${layerName}-outline`);
+          layerIdsToRemove.add(`layer-${layerName}-lines`);
+          layerIdsToRemove.add(`layer-${layerName}-points`);
+          sourceIdsToRemove.add(`source-${layerName}`);
+        });
+
+        // Execute removal
+        layerIdsToRemove.forEach(id => {
+          if (mapboxMap.getLayer(id)) {
+            mapboxMap.removeLayer(id);
+          }
+        });
+        sourceIdsToRemove.forEach(id => {
+          if (mapboxMap.getSource(id)) {
+            mapboxMap.removeSource(id);
+          }
+        });
+
+        // Ensure any open popups are closed
+        const existingPopups = mapboxMap._popups || [];
+        while (existingPopups.length > 0) {
+            existingPopups[0].remove();
+        }
+
+      }
+    };
   }, [activeLayers, addLayerToMap, removeLayerFromMap, mapboxMap]);
 
   return (
