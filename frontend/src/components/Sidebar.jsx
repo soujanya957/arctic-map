@@ -217,15 +217,40 @@ const Sidebar = ({ onLayerToggle }) => {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-content">
+      
+      <div className="sidebar-instructions">
+        <h3>About Arctic Map</h3>
+        <p>
+          Arctic Map is a tool for exploring & analyzing a robust collection of 80+ cleaned, geospatial datasets related to the Arctic region.
+           Explore the app's following features: 
+        </p>
+        <ul style={{ paddingLeft: '20px', fontSize: '0.9em' }}>
+          <li>
+            <strong>Layers:</strong> Toggle layers on and off to visualize different datasets.
+          </li>
+          <li>
+            <strong>Spatial Query:</strong> Use the drawing tools to select an area and find intersecting features.
+          </li>
+          <li>
+            <strong>Thematic Map:</strong> Switch to Thematic Mode (button on the map) to color map layers based on attribute data.
+          </li>
+          <li>
+            <strong>Search:</strong> Use the search bar to find locations and features of interest.
+          </li>
+        </ul>
+
+        <p>
+          This web application is a project of the <a href="https://nna-cpad.org/">CPAD consortium</a> and is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>.
+        </p>
+
+        <p>
+          Credits: Developed by Brown University students Soujanya Aryal and Noreen Chen.
+        </p>
+      </div>
+
+      <div className="sidebar-data-layers">
         <h2>Dataset Layers</h2>
-        {/* <button
-          className="spatial-query-btn"
-          style={{ marginBottom: "1em" }}
-          onClick={() => setShowSpatialQueryPopup(true)}
-        >
-          Spatial Queries
-        </button> */}
+
         <ul className="layer-list">
           {layers.map((themeGroup) => ( 
             <li key={themeGroup.id} className="theme-item">
