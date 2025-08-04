@@ -5,6 +5,7 @@ import FeatureHighlighter from './FeatureHighlighter';
 import SearchBar from './SearchBar';
 import DrawControls from './DrawControls';
 import SpatialQueryPanel from './SpatialQueryPanel';
+import bbox from '@turf/bbox';
 
 const Map = ({
   mapboxMap,
@@ -13,7 +14,7 @@ const Map = ({
   highlightedFeatures,
 }) => {
 
-  const loadingLayers = useRef(new Set());
+  const loadingLayers = useRef(new Set()); // tracks user's most recently checked layer, fetching from backend API
 
   const addLayerToMap = useCallback((layerName, geojson) => {
     if (!mapboxMap) {
@@ -125,6 +126,21 @@ const Map = ({
     }
 
     console.log(`Layer ${layerName} added to map.`);
+
+    // Fit map view to the bounding box of the user's most recently selected layer's features
+    const allFeatures = cleanedGeojson.features;
+    if (allFeatures.length > 0) {
+      const bounds = bbox({
+        type: 'FeatureCollection',
+        features: allFeatures,
+      });
+
+      mapboxMap.fitBounds(bounds, {
+        padding: 50, // Add some padding around the features
+        maxZoom: 10, // Optional: prevent zooming in too far
+        duration: 1500, // Optional: animated zoom duration in milliseconds
+      });
+    }
   }, [mapboxMap]);
 
 

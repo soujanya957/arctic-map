@@ -5,7 +5,6 @@ import Map from "./components/Map";
 import Sidebar from "./components/Sidebar";
 import ThematicMap from "./components/ThematicMap";
 import thematicMapConfigs from "./config/thematicMapConfigs";
-
 import "./styles/Sidebar.css";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;

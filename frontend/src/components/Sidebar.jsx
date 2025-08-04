@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../styles/Sidebar.css";
 import AttributeTable from "./AttributeTable";
-// import Metadata from "./Metadata";
-// import SpatialQueryPopup from "./SpatialQueryPopup";
 
 const Popup = ({ title, onClose, children }) => (
   <div className="attribute-popup" role="dialog" aria-modal="true">
@@ -24,30 +22,6 @@ const Sidebar = ({ onLayerToggle }) => {
   const [loadingAttributes, setLoadingAttributes] = useState(false);
   const [confirmDownloadLayer, setConfirmDownloadLayer] = useState(null);
   const [showBatchDownloadPopup, setShowBatchDownloadPopup] = useState(false);
-  // const [showSpatialQueryPopup, setShowSpatialQueryPopup] = useState(false);
-
-  // this is the old implementation of populating all the datasets in the sidebar
-  // it's since been updated to rely on a google sheets ordering of datasets
-  //
-  // useEffect(() => {
-  //   // fetch("http://127.0.0.1:8000/api/layers")
-  //   fetch("http://localhost:8000/api/layers")
-  //     .then((res) => res.json())
-  //     .then((data) => {
-  //       if (data.layers) {
-  //         const initialState = {};
-  //         const dropdownState = {};
-  //         data.layers.forEach((layer) => {
-  //           initialState[layer] = false;
-  //           dropdownState[layer] = false;
-  //         });
-  //         setLayers(data.layers);
-  //         setSelectedLayers(initialState);
-  //         setOpenDropdowns(dropdownState);
-  //       }
-  //     })
-  //     .catch((err) => console.error("Failed to fetch layers:", err));
-  // }, []);
 
   useEffect(() => {
     fetch("http://localhost:8000/api/layer_hierarchy")
@@ -142,24 +116,6 @@ const Sidebar = ({ onLayerToggle }) => {
         setLoadingAttributes(false);
       });
   };
-
-  // Handle "Meta data" click
-  // const handleViewMetadata = (layer) => {
-  //   setLoadingMetadata(true);
-  //   setMetadataLayer(formatLayerName(layer));
-  //   fetch(`http://localhost:8000/api/geojson/${layer}`)
-  //     .then((res) => res.json())
-  //     .then((data) => {
-  //       setMetadataContent(data.metadata || "No metadata found.");
-  //       setShowMetadataPopup(true);
-  //       setLoadingMetadata(false);
-  //     })
-  //     .catch((err) => {
-  //       setMetadataContent("Failed to load metadata.");
-  //       setShowMetadataPopup(true);
-  //       setLoadingMetadata(false);
-  //     });
-  // };
 
   const handleDownloadShp = (layer) => {
     const link = document.createElement("a");
@@ -361,19 +317,6 @@ const Sidebar = ({ onLayerToggle }) => {
         </Popup>
       )}
 
-      {/* Metadata popup
-      <Metadata
-        open={showMetadataPopup}
-        onClose={() => setShowMetadataPopup(false)}
-        layerName={metadataLayer}
-        metadata={metadataContent}
-        loading={loadingMetadata}
-      /> */}
-
-      {/* Spatial Query popup */}
-      {/* {showSpatialQueryPopup && (
-        <SpatialQueryPopup onClose={() => setShowSpatialQueryPopup(false)} />
-      )} */}
     </div>
   );
 };

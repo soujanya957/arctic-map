@@ -9,10 +9,11 @@
 }
 
 .sidebar-instructions {
-  max-height: 190px; 
+  max-height: 150px; 
   overflow-y: auto;
   padding: 20px;
-  margin-bottom: 20px; /* Adds space between instructions and layer list */
+  margin-bottom: 0px; /* Adds space between instructions and layer list */
+  margin-top: -20px;
   padding-bottom: 10px; /* Padding to the bottom of the content */
   border-bottom: 1px solid #ddd; /* A separator line */
 }

@@ -165,6 +165,14 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
     setSelectedAttributeId(event.target.value);
   };
 
+  const handleViewMetadata = () => {
+    if (selectedAttributeId) {
+      window.open(`http://localhost:8000/api/metadata_html/${selectedAttributeId}`, "_blank");
+    } else {
+      console.warn("No attribute selected to view metadata.");
+    }
+  };
+
   const getSelectedAttributeDetails = useCallback(() => {
     if (currentThematicLayerConfig && selectedAttributeId) {
       return currentThematicLayerConfig.attributes.find(attr => attr.id === selectedAttributeId);
@@ -250,7 +258,7 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
             >
               <option value="">Select an Attribute</option>
               {currentThematicLayerConfig.attributes.map(attr => (
-                <option key={attr.id} value={attr.id}>{attr.name}</option>
+                <option key={attr.id} value={attr.id}>{attr.display_name}</option>
               ))}
             </select>
           </div>
@@ -272,7 +280,7 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
           maxWidth: '250px'
         }}>
           <h3>
-            Legend: {selectedAttributeDetails ? selectedAttributeDetails.name : selectedAttributeId} 
+            Legend: {selectedAttributeDetails ? selectedAttributeDetails.display_name : selectedAttributeId} 
             {selectedAttributeDetails && selectedAttributeDetails.units && (
               <span style={{ fontSize: '0.8em', color: '#666', marginLeft: '5px' }}>
                 ({selectedAttributeDetails.units})
@@ -315,10 +323,24 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
           boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
           maxWidth: '300px'
         }}>
-          <h3>Attribute Key: {selectedAttributeDetails.name}</h3>
+          <h3>Attribute Key: {selectedAttributeDetails.display_name}</h3>
           <p style={{ fontSize: '0.9em', color: '#333' }}>
             {selectedAttributeDetails.description}
           </p>
+
+          <button
+            onClick={handleViewMetadata}
+            style={{
+              padding: '5px 10px',
+              fontSize: '0.8em',
+              cursor: 'pointer',
+              backgroundColor: '#f0f0f0',
+              border: '1px solid #ccc',
+              borderRadius: '3px'
+            }}
+          >
+            View Metadata ↗
+          </button>
         </div>
       )}
     </>
