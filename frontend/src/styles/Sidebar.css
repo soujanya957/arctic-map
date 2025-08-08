@@ -16,6 +16,7 @@
   margin-top: -20px;
   padding-bottom: 10px; /* Padding to the bottom of the content */
   border-bottom: 1px solid #ddd; /* A separator line */
+  background: #f0f0f0;
 }
 
 .sidebar-data-layers {
@@ -223,39 +224,6 @@
   border-width: 0 2px 2px 0;
   transform: translate(-50%, -50%) rotate(45deg);
 }
-
-/* Dropdown toggle icon using CSS chevron - commented out */
-/*
-.dropdown-toggle {
-  background: none;
-  border: none;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  margin-left: 8px;
-  cursor: pointer;
-  position: relative;
-  display: inline-block;
-  transition: transform 0.3s ease;
-}
-
-.dropdown-toggle::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid #0077cc;
-  border-bottom: 2px solid #0077cc;
-  transform: translate(-50%, -50%) rotate(45deg);
-  transition: transform 0.3s ease;
-}
-
-.dropdown-toggle.open::before {
-  transform: translate(-50%, -50%) rotate(-135deg);
-}
-*/
 
 .dropdown-menu {
   margin-top: 6px;
@@ -469,4 +437,60 @@ td {
     height: 100vh;
     max-height: 100vh;
   }
+}
+
+/* Map Mode Toggle Switch Styles */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 5px;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #007bff;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
 }

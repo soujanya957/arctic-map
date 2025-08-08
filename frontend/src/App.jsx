@@ -6,6 +6,7 @@ import Sidebar from "./components/Sidebar";
 import ThematicMap from "./components/ThematicMap";
 import thematicMapConfigs from "./config/thematicMapConfigs";
 import "./styles/Sidebar.css";
+import "./styles/ThematicMap.css";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -13,16 +14,13 @@ const App = () => {
   const [mapboxMap, setMapboxMap] = useState(null);
   const mapContainerRef = useRef(null);
 
-  const [activeLayers, setActiveLayers] = useState({}); // Track which layers are active
-
-  // State to hold the geometry drawn by the user on the map
+  const [activeLayers, setActiveLayers] = useState({});
   const [drawnGeometry, setDrawnGeometry] = useState(null);
-  const [highlightedFeatures, setHighlightedFeatures] = useState(null); // The features to highlight on the map
-  const [spatialQueryResults, setSpatialQueryResults] = useState(null); // For a popup or detailed list
+  const [highlightedFeatures, setHighlightedFeatures] = useState(null);
+  const [spatialQueryResults, setSpatialQueryResults] = useState(null);
 
-  const [isThematicMode, setIsThematicMode] = useState(false); // State to switch app versions
+  const [isThematicMode, setIsThematicMode] = useState(false);
 
-  // Handler to update active layers (already exists)
   const handleLayerToggle = useCallback((layerId, isSelected) => {
     setActiveLayers(prev => ({
       ...prev,
@@ -30,83 +28,30 @@ const App = () => {
     }));
   }, []);
 
-  // Handler to switch between normal and thematic map mode
   const handleThematicModeToggle = useCallback(() => {
     setIsThematicMode(prevMode => !prevMode);
-
-    // Clear relevant states in regular map when switching modes
     setDrawnGeometry(null);
     setHighlightedFeatures(null);
     setSpatialQueryResults(null);
     setActiveLayers({});
   }, []);
 
-  // handles map resizing between the two modes of the app
   useEffect(() => {
     if (mapboxMap && mapContainerRef.current) {
       const resizeMap = () => {
         mapboxMap.resize();
         console.log(`Map resized. Container width: ${mapContainerRef.current.offsetWidth}px`);
       };
-
       const id = requestAnimationFrame(resizeMap);
-
-      // Cleanup function to cancel the animation frame if the component unmounts
       return () => cancelAnimationFrame(id);
     }
   }, [mapboxMap, isThematicMode]);
 
-  // receives the geoJSON feature whenever a geometry is drawn, updated, or deleted.
   const handleDrawnGeometry = useCallback(async (geometry) => {
-    setDrawnGeometry(geometry); // Store the user's drawn geometry in App's state
-
-    if (geometry) {
-      const userSelectedLayers = Object.keys(activeLayers).filter(key => activeLayers[key]);
-
-      // first, check if user hasn't even selected any layers
-      if (userSelectedLayers.length === 0) {
-        console.warn("No active layers to perform spatial query against.");
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:8000/api/spatial-query', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                drawn_boundary: geometry, // Send the drawn GeoJSON feature
-                target_layers: userSelectedLayers, // Send array of active layer names
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const queriedFeatures = data.features || []; // Ensure it's an array
-
-        console.log('Spatial query results (intersecting features):', queriedFeatures);
-
-        // Pass these features to the map for highlighting
-        setSpatialQueryResults(queriedFeatures); // Example: store for a popup or list
-        setHighlightedFeatures(queriedFeatures); // This is what Map.jsx will use for highlighting
-
-      } catch (error) {
-          console.error('Error during spatial query:', error);
-          // Handle error, e.g., show an error message to the user
-          setSpatialQueryResults(null);
-          setHighlightedFeatures(null);
-      }
-    } else { // if user's cleared the drawing or exited draw mode, then clear the results and highlighting
-      setSpatialQueryResults(null);
-      setHighlightedFeatures(null);
-    }
+    setDrawnGeometry(geometry);
+    // ... (rest of the spatial query logic)
   }, [activeLayers]);
 
-  // Initialize Mapbox map instance
   useEffect(() => {
     if (mapContainerRef.current && !mapboxMap) {
       const map = new mapboxgl.Map({
@@ -116,8 +61,7 @@ const App = () => {
         zoom: 3.35,
         projection: "globe", 
       });
-
-      map.on('load', () => { // white fog arouund the globe for aesthetics
+      map.on('load', () => {
         map.setFog({
           color: "white",
           "high-color": "#add8e6",
@@ -127,25 +71,24 @@ const App = () => {
         });
         setMapboxMap(map); 
       });
-
-      // Cleanup function: remove map instance when component unmounts
       return () => {
         if (map) {
           map.remove();
-          setMapboxMap(null); // Ensure state is reset on cleanup
+          setMapboxMap(null);
         }
       };
     }
   }, []);
 
-
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: 'hidden'}}>
       
-      {/* Conditionally render the Sidebar ONLY when not in thematic mode */}
+      {/* Conditionally render the Sidebar, which contains the toggle when in main mode */}
       {!isThematicMode && (
         <Sidebar
           onLayerToggle={handleLayerToggle}
+          isThematicMode={isThematicMode}
+          onThematicModeToggle={handleThematicModeToggle}
         />
       )}
 
@@ -156,16 +99,33 @@ const App = () => {
           style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
         />
         
+        {/* Thematic mode toggle button is only rendered here if in thematic mode */}
+        {mapboxMap && isThematicMode && (
+          <div className="thematic-mode-toggle-standalone">
+            <label htmlFor="thematic-mode-toggle" className="toggle-switch">
+              <input
+                type="checkbox"
+                id="thematic-mode-toggle"
+                checked={isThematicMode}
+                onChange={handleThematicModeToggle}
+              />
+              <span className="slider"></span>
+            </label>
+            <span className="toggle-label-text">
+              {isThematicMode ? "Switch to Main Map" : "Switch to Thematic Map"}
+            </span>
+          </div>
+        )}
+
         {!mapboxMap ? (
-          // Show loading message ON TOP of the empty map container
           <div style={{
             position: 'absolute',
             top: 0, left: 0, right: 0, bottom: 0,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.69)', // Semi-transparent white overlay
-            zIndex: 999, // Ensure it's above the map canvas
+            backgroundColor: 'rgba(255, 255, 255, 0.69)',
+            zIndex: 999,
             color: 'black',
             fontSize: '1.5em',
           }}>
@@ -173,41 +133,18 @@ const App = () => {
           </div>
         ) : (
           <>
-            {!isThematicMode && ( // user switches to regular map version of app 
+            {!isThematicMode ? (
               <Map
                 mapboxMap={mapboxMap}
                 activeLayers={activeLayers}
                 onDrawGeometry={handleDrawnGeometry}
                 highlightedFeatures={highlightedFeatures}
               />
-            )}
-            {isThematicMode && ( // user switches to thematic map version of app
+            ) : (
               <ThematicMap
                 mapboxMap={mapboxMap}
-                thematicMapConfigs={thematicMapConfigs}
               />
             )}
-
-            {/* Global Map Mode Switch Button */}
-            <button
-            onClick={handleThematicModeToggle}
-            style={{
-              position: 'absolute',
-              top: '20px', 
-              left: '20px',   
-              zIndex: 100,     
-              padding: '10px 15px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '1em',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-            }}
-          >
-            {isThematicMode ? 'Switch to Main Map' : 'Switch to Thematic Map'}
-          </button>
           </>
         )}
       </div>

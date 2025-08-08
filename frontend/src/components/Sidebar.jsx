@@ -12,32 +12,33 @@ const Popup = ({ title, onClose, children }) => (
   </div>
 );
 
-const Sidebar = ({ onLayerToggle }) => {
-  const [layers, setLayers] = useState([]); // holds subtheme groups
-  const [selectedLayers, setSelectedLayers] = useState({}); // tracks individal layer checkboxes
-  const [openDropdowns, setOpenDropdowns] = useState({}); // tracks open/closd state of subthemes
+const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle }) => {
+  const [layers, setLayers] = useState([]);
+  const [selectedLayers, setSelectedLayers] = useState({});
+  const [openDropdowns, setOpenDropdowns] = useState({});
   const [attributeData, setAttributeData] = useState([]);
   const [activeLayerForAttributeTable, setActiveLayerForAttributeTable] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [loadingAttributes, setLoadingAttributes] = useState(false);
   const [confirmDownloadLayer, setConfirmDownloadLayer] = useState(null);
   const [showBatchDownloadPopup, setShowBatchDownloadPopup] = useState(false);
+  const [showAboutPopup, setShowAboutPopup] = useState(false); // NEW state for the about popup
 
   useEffect(() => {
     fetch("http://localhost:8000/api/layer_hierarchy")
       .then((res) => res.json())
       .then((data) => {
-        const themeGroups = []; // holds themes and each of their subthemes and datasets
-        const initialState = {}; // the user's selected layers
-        const dropdownState = {}; // open/closed state of subtheme dropdowns
+        const themeGroups = [];
+        const initialState = {};
+        const dropdownState = {};
   
         for (const theme in data) {
-          const subthemesForCurrentTheme = []; // array that holds subtheme objects for this theme
+          const subthemesForCurrentTheme = [];
 
           for (const subtheme in data[theme]) {
             const datasets = data[theme][subtheme];
             const formattedDatasets = datasets.map(entry => {
-              initialState[entry.layer_name] = false; // initialize all layers as unchecked
+              initialState[entry.layer_name] = false;
               return {
                 layer_name: entry.layer_name,
                 display_name: entry.display_name,
@@ -46,7 +47,6 @@ const Sidebar = ({ onLayerToggle }) => {
               };
             });
             
-            // create subtheme group with unque ID using both theme and subtheme names
             const uniqueSubthemeId = `${theme}-${subtheme}`; 
 
             subthemesForCurrentTheme.push({
@@ -54,13 +54,12 @@ const Sidebar = ({ onLayerToggle }) => {
               name: subtheme,
               datasets: formattedDatasets
             });
-            dropdownState[uniqueSubthemeId] = false; // initialize subtheme dropdowns to be closed
+            dropdownState[uniqueSubthemeId] = false;
           }
 
-          // add current theme and its subthemes to main themeGroups array
           themeGroups.push({
             id: theme, 
-            name: theme, // display name
+            name: theme,
             subthemes: subthemesForCurrentTheme
           });
         }
@@ -175,38 +174,34 @@ const Sidebar = ({ onLayerToggle }) => {
     <div className="sidebar">
       
       <div className="sidebar-instructions">
-        <h3>About Arctic Map</h3>
-        <p>
-          Arctic Map is a tool for exploring & analyzing a robust collection of 80+ cleaned, geospatial datasets related to the Arctic region.
-           Explore the app's following features: 
-        </p>
-        <ul style={{ paddingLeft: '20px', fontSize: '0.9em' }}>
-          <li>
-            <strong>Layers:</strong> Toggle layers on and off to visualize different datasets.
-          </li>
-          <li>
-            <strong>Spatial Query:</strong> Use the drawing tools to select an area and find intersecting features.
-          </li>
-          <li>
-            <strong>Thematic Map:</strong> Switch to Thematic Mode (button on the map) to color map layers based on attribute data.
-          </li>
-          <li>
-            <strong>Search:</strong> Use the search bar to find locations and features of interest.
-          </li>
-        </ul>
+        {/* Make header clickable to open the new popup */}
+        <h3 
+          onClick={() => setShowAboutPopup(true)}
+          style={{ cursor: 'pointer' }}
+        >
+          About Arctic Map ⓘ
+        </h3>
 
-        <p>
-          This web application is a project of the <a href="https://nna-cpad.org/">CPAD consortium</a> and is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>.
-        </p>
-
-        <p>
-          Credits: Developed by Brown University students Soujanya Aryal and Noreen Chen.
-        </p>
+        {/* Thematic Mode Toggle Switch and Label */}
+        <div className="toggle-container">
+          <label htmlFor="thematic-mode-toggle" className="toggle-switch">
+            <input
+              type="checkbox"
+              id="thematic-mode-toggle"
+              checked={isThematicMode}
+              onChange={onThematicModeToggle}
+            />
+            <span className="slider"></span>
+          </label>
+          <span className="toggle-label-text">
+            {isThematicMode ? "Switch to Main Map" : "Switch to Thematic Map"}
+          </span>
+        </div>
       </div>
 
       <div className="sidebar-data-layers">
         <h2>Dataset Layers</h2>
-
+        
         <ul className="layer-list">
           {layers.map((themeGroup) => ( 
             <li key={themeGroup.id} className="theme-item">
@@ -262,6 +257,41 @@ const Sidebar = ({ onLayerToggle }) => {
       <button className="download-all-btn" onClick={handleDownloadAll}>
         ⬇ Download All Selected Layers
       </button>
+
+      {/* Popup for the About section */}
+      {showAboutPopup && (
+        <Popup title="About Arctic Map" onClose={() => setShowAboutPopup(false)}>
+          <p>
+            Arctic Map is a tool for exploring & analyzing a robust collection of 80+ cleaned, geospatial datasets related to the Arctic region.
+            Explore the app's following features: 
+          </p>
+          <ul style={{ paddingLeft: '20px', fontSize: '0.9em' }}>
+            <li>
+              <strong>Layers:</strong> Toggle layers on and off to visualize different datasets.
+            </li>
+            <li>
+              <strong>Spatial Query:</strong> Use the drawing tools to select an area and find intersecting features.
+            </li>
+            <li>
+              <strong>Download Data:</strong> Download entire datasets as zipped shapefiles and custom areas/queries as GeoJSON files. 
+            </li>
+            <li>
+              <strong>Thematic Map:</strong> Switch to Thematic Mode to color map layers based on attribute data.
+            </li>
+            <li>
+              <strong>Search:</strong> Use the search bar to find locations and features of interest.
+            </li>
+          </ul>
+
+          <p>
+            This web application is a project of the <a href="https://nna-cpad.org/">CPAD consortium</a> and is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>.
+          </p>
+
+          <p>
+            Credits: Developed by Brown University students Soujanya Aryal and Noreen Chen.
+          </p>
+        </Popup>
+      )}
 
       {showPopup && (
         <Popup

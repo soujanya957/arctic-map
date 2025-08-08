@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import thematicMapConfigs from '../config/thematicMapConfigs';
+import '../styles/ThematicMap.css'; // New import for toggle switch styles
 
 // Helper function to apply thematic styling 
 const applyThematicStyling = async (map, layerConfig, attribute, setMinMaxValues) => {
@@ -210,7 +211,7 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
 
   return (
     <>
-      {/* Thematic Controls Overlay (Dropdowns) - MOVED TO TOP-MIDDLE */}
+      {/* Thematic Map Dropdowns, in top-middle */}
       <div style={{
         position: 'absolute',
         top: '20px', // Distance from the top

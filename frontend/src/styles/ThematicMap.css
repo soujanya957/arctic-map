@@ -1,0 +1,131 @@
+.thematic-controls-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    pointer-events: auto;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .thematic-legend-overlay {
+    position: absolute;
+    bottom: 50px;
+    right: 20px;
+    z-index: 2;
+    pointer-events: auto;
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    max-width: 250px;
+  }
+  
+  .thematic-attribute-key-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    pointerEvents: auto;
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    max-width: 300px;
+  }
+  
+  .thematic-attribute-key-overlay h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .legend-color-step {
+    display: flex;
+    align-items: center;
+  }
+  
+  .legend-color-box {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+  }
+
+.thematic-mode-toggle-standalone {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    pointer-events: auto;
+    background-color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .toggle-label-text {
+    font-size: 1em;
+    color: #333;
+  }
+
+  /* Styling for the macOS-style toggle switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px; /* Width of the entire switch */
+    height: 20px; /* Height of the entire switch */
+  }
+  
+  /* Hide the default checkbox input */
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  /* The 'slider' part of the switch */
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 20px; /* Make it a rounded pill shape */
+  }
+  
+  /* The 'circle' that moves */
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%; /* Make it a circle */
+  }
+  
+  /* When the checkbox is checked... */
+  input:checked + .slider {
+    background-color: #007bff; /* Change background color when 'on' */
+  }
+  
+  /* Move the circle to the right when 'on' */
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+
