@@ -7,6 +7,7 @@ import DrawControls from './DrawControls';
 import SpatialQueryPanel from './SpatialQueryPanel';
 import bbox from '@turf/bbox';
 
+
 const Map = ({
   mapboxMap,
   activeLayers,
@@ -15,7 +16,47 @@ const Map = ({
 }) => {
 
   const loadingLayers = useRef(new Set()); // tracks user's most recently checked layer, fetching from backend API
+  
+  // This function adds a click event listener to a layer to show a popup
+  const addPopupClickListeners = useCallback((layerId, layerName) => {
+    if (!mapboxMap) return;
 
+    // Remove any existing listener to prevent duplicates
+    const onClick = (e) => {
+        // Prevent default behavior to avoid interfering with other events
+        e.preventDefault(); 
+        
+        // Use the first feature in the array for the popup
+        const feature = e.features[0];
+        if (!feature) return;
+
+        // Get properties and filter out Mapbox-specific ones
+        const properties = Object.entries(feature.properties)
+            .filter(([key, value]) => !key.startsWith('_'))
+            .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
+        
+        // Format properties for display
+        const displayProps = Object.entries(properties)
+            .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+            .join('<br>');
+        
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`
+                <div class="map-popup">
+                    <h4>Layer: ${layerName}</h4>
+                    <p>${displayProps}</p>
+                </div>
+            `)
+            .addTo(mapboxMap);
+    };
+
+    mapboxMap.on("click", layerId, onClick);
+    // Cleanup function for this listener
+    return () => mapboxMap.off("click", layerId, onClick);
+  }, [mapboxMap]);
+
+  // This is the core function for adding a new layer to the map
   const addLayerToMap = useCallback((layerName, geojson) => {
     if (!mapboxMap) {
       console.warn("addLayerToMap: mapboxMap is not available. Cannot add layer.");
@@ -24,8 +65,7 @@ const Map = ({
 
     const sourceId = `source-${layerName}`;
     const layerId = `layer-${layerName}`;
-
-    // If source already exists, just return (layer might be hidden, or already processed)
+    
     if (mapboxMap.getSource(sourceId)) {
       console.log(`Source ${sourceId} already exists for layer ${layerName}.`);
       return;
@@ -46,8 +86,10 @@ const Map = ({
       data: cleanedGeojson,
     });
 
-  // Add layers for polygons, lines, points
-    if (validFeatures.some(f => f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon'))) {
+    const layerTypes = new Set(validFeatures.map(f => f.geometry.type));
+    
+    // Add layers for polygons, lines, points and their click listeners
+    if (layerTypes.has("Polygon") || layerTypes.has("MultiPolygon")) {
       mapboxMap.addLayer({
         id: `${layerId}-polygons`,
         type: "fill",
@@ -68,18 +110,10 @@ const Map = ({
           "line-width": 2,
         },
       });
-
-      // view attribute popup when user clicks on polygons
-      mapboxMap.on("click", `${layerId}-polygons`, (e) => {
-        const props = e.features[0].properties;
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-          .addTo(mapboxMap);
-      });
+      addPopupClickListeners(`${layerId}-polygons`, layerName);
     }
-
-    if (validFeatures.some(f => f.geometry && (f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString'))) {
+    
+    if (layerTypes.has("LineString") || layerTypes.has("MultiLineString")) {
       mapboxMap.addLayer({
         id: `${layerId}-lines`,
         type: "line",
@@ -90,18 +124,10 @@ const Map = ({
           "line-width": 3,
         },
       });
-
-      // view attribute popup when user clicks on lines
-      mapboxMap.on("click", `${layerId}-lines`, (e) => {
-        const props = e.features[0].properties;
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-          .addTo(mapboxMap);
-      });
+      addPopupClickListeners(`${layerId}-lines`, layerName);
     }
-
-    if (validFeatures.some(f => f.geometry && (f.geometry.type === 'Point' || f.geometry.type === 'MultiPoint'))) {
+    
+    if (layerTypes.has("Point") || layerTypes.has("MultiPoint")) {
       mapboxMap.addLayer({
         id: `${layerId}-points`,
         type: "circle",
@@ -114,18 +140,8 @@ const Map = ({
           "circle-stroke-width": 2,
         },
       });
-
-      // view attribute popup when user clicks on points
-      mapboxMap.on("click", `${layerId}-points`, (e) => {
-        const props = e.features[0].properties;
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(`<pre>${JSON.stringify(props, null, 2)}</pre>`)
-          .addTo(mapboxMap);
-      });
+      addPopupClickListeners(`${layerId}-points`, layerName);
     }
-
-    console.log(`Layer ${layerName} added to map.`);
 
     // Fit map view to the bounding box of the user's most recently selected layer's features
     const allFeatures = cleanedGeojson.features;
@@ -136,13 +152,12 @@ const Map = ({
       });
 
       mapboxMap.fitBounds(bounds, {
-        padding: 50, // Add some padding around the features
-        maxZoom: 10, // Optional: prevent zooming in too far
-        duration: 1500, // Optional: animated zoom duration in milliseconds
+        padding: 50,
+        maxZoom: 10,
+        duration: 1500,
       });
     }
-  }, [mapboxMap]);
-
+  }, [mapboxMap, addPopupClickListeners]);
 
   // when users uncheck layers
   const removeLayerFromMap = useCallback((layerName) => {
@@ -150,17 +165,25 @@ const Map = ({
 
     const sourceId = `source-${layerName}`;
     const layerId = `layer-${layerName}`;
+    
+    // An array of all layer IDs that might exist for this layer name
+    const allLayerIds = [
+      `${layerId}-polygons`,
+      `${layerId}-outline`,
+      `${layerId}-lines`,
+      `${layerId}-points`
+    ];
 
-    [`${layerId}-polygons`, `${layerId}-outline`, `${layerId}-lines`, `${layerId}-points`].forEach(id => {
+    allLayerIds.forEach(id => {
+      // It's important to remove the click listener first
+      mapboxMap.off("click", id, () => {});
       if (mapboxMap.getLayer(id)) {
         mapboxMap.removeLayer(id);
-        console.log(`Removed layer: ${id}`);
       }
     });
 
     if (mapboxMap.getSource(sourceId)) {
       mapboxMap.removeSource(sourceId);
-      console.log(`Removed source: ${sourceId}`);
     }
   }, [mapboxMap]);
 
@@ -173,18 +196,14 @@ const Map = ({
       if (isActive) {
         if (!mapboxMap.getSource(sourceId) && !loadingLayers.current.has(layerName)) {
           loadingLayers.current.add(layerName);
-          console.log(`Attempting to fetch GeoJSON for layer: ${layerName}`);
           fetch(`http://localhost:8000/api/geojson/${layerName}`)
             .then((res) => {
               if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
               return res.json();
             })
-            .then((response) => {
-              const geojson = response;
-              if (!geojson || !geojson.features || geojson.features.length === 0) {
-                console.warn(`GeoJSON for ${layerName} has no features or is malformed.`);
-                return;
-              }
+            .then((geojson) => {
+              // Check again if the layer exists, in case it was toggled off while fetching
+              if (mapboxMap.getSource(`source-${layerName}`)) return;
               addLayerToMap(layerName, geojson);
             })
             .catch((err) => console.error(`Failed to load ${layerName}:`, err))
@@ -198,11 +217,9 @@ const Map = ({
     // Cleanup function when Map.jsx component unmounts
     return () => {
       if (mapboxMap) {
-        // Iterate over ALL active layers and ensure they are removed from the map
         const layerIdsToRemove = new Set();
         const sourceIdsToRemove = new Set();
 
-        // Collect IDs based on the naming convention used by this component
         Object.keys(activeLayers).forEach(layerName => {
           layerIdsToRemove.add(`layer-${layerName}-polygons`);
           layerIdsToRemove.add(`layer-${layerName}-outline`);
@@ -211,8 +228,9 @@ const Map = ({
           sourceIdsToRemove.add(`source-${layerName}`);
         });
 
-        // Execute removal
         layerIdsToRemove.forEach(id => {
+          // Remove listener before removing the layer
+          mapboxMap.off("click", id, () => {});
           if (mapboxMap.getLayer(id)) {
             mapboxMap.removeLayer(id);
           }
@@ -228,14 +246,12 @@ const Map = ({
         while (existingPopups.length > 0) {
             existingPopups[0].remove();
         }
-
       }
     };
   }, [activeLayers, addLayerToMap, removeLayerFromMap, mapboxMap]);
 
   return (
     <>
-      {/* User interface controls - Position them individually */}
       {mapboxMap && (
           <SearchBar map={mapboxMap} />
       )}
@@ -244,10 +260,8 @@ const Map = ({
           <DrawControls map={mapboxMap} onDrawGeometry={onDrawGeometry} />
       )}
 
-      {/* Highlighting features - This component doesn't render any visible UI, it just adds map layers */}
       {mapboxMap && <FeatureHighlighter mapboxMap={mapboxMap} highlightedFeatures={highlightedFeatures} />}
 
-      {/* Spatial query results and download panel */}
       {mapboxMap && highlightedFeatures && highlightedFeatures.length > 0 && (
           <SpatialQueryPanel highlightedFeatures={highlightedFeatures} />
       )}

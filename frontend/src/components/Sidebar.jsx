@@ -12,7 +12,7 @@ const Popup = ({ title, onClose, children }) => (
   </div>
 );
 
-const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle }) => {
+const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle, isSidebarOpen }) => {
   const [layers, setLayers] = useState([]);
   const [selectedLayers, setSelectedLayers] = useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
@@ -22,7 +22,7 @@ const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle }) => {
   const [loadingAttributes, setLoadingAttributes] = useState(false);
   const [confirmDownloadLayer, setConfirmDownloadLayer] = useState(null);
   const [showBatchDownloadPopup, setShowBatchDownloadPopup] = useState(false);
-  const [showAboutPopup, setShowAboutPopup] = useState(false); // NEW state for the about popup
+  const [showAboutPopup, setShowAboutPopup] = useState(false);
 
   useEffect(() => {
     fetch("http://localhost:8000/api/layer_hierarchy")
@@ -171,16 +171,19 @@ const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle }) => {
   const fieldTypes = getFieldTypes(attributeData);
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isSidebarOpen ? '' : 'sidebar-collapsed'}`}>
       
       <div className="sidebar-instructions">
         {/* Make header clickable to open the new popup */}
-        <h3 
-          onClick={() => setShowAboutPopup(true)}
-          style={{ cursor: 'pointer' }}
-        >
-          About Arctic Map ⓘ
-        </h3>
+        <div className="about-header-container">
+          <h3
+            onClick={() => setShowAboutPopup(true)}
+            style={{ cursor: 'pointer' }}
+          >
+            About Arctic Map ⓘ
+          </h3>
+          
+        </div>
 
         {/* Thematic Mode Toggle Switch and Label */}
         <div className="toggle-container">
@@ -258,7 +261,6 @@ const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle }) => {
         ⬇ Download All Selected Layers
       </button>
 
-      {/* Popup for the About section */}
       {showAboutPopup && (
         <Popup title="About Arctic Map" onClose={() => setShowAboutPopup(false)}>
           <p>
@@ -273,10 +275,7 @@ const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle }) => {
               <strong>Spatial Query:</strong> Use the drawing tools to select an area and find intersecting features.
             </li>
             <li>
-              <strong>Download Data:</strong> Download entire datasets as zipped shapefiles and custom areas/queries as GeoJSON files. 
-            </li>
-            <li>
-              <strong>Thematic Map:</strong> Switch to Thematic Mode to color map layers based on attribute data.
+              <strong>Thematic Map:</strong> Switch to Thematic Mode (button on the map) to color map layers based on attribute data.
             </li>
             <li>
               <strong>Search:</strong> Use the search bar to find locations and features of interest.

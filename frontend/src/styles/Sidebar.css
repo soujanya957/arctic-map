@@ -494,3 +494,42 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(20px);
 }
+
+
+/* New class for the collapsed sidebar */
+.sidebar-collapsed {
+  width: 20px; 
+  padding: 0;
+  overflow: hidden; /* Hide all content when collapsed */
+}
+
+.sidebar-collapsed > * {
+  opacity: 0;
+  pointer-events: none; /* Prevents interaction with hidden elements */
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Styles for the new toggle button */
+.sidebar-toggle-button {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%) translateX(100%);
+  z-index: 100;
+  background-color: #f8f8f8;
+  border-radius: 0 5px 5px 0;
+  cursor: pointer;
+  padding: 10px 5px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  font-weight: bold;
+  user-select: none;
+  transition: left 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.sidebar-toggle-button.is-open {
+  left: -20px; /* Position next to the open sidebar */
+}
+
+.sidebar-toggle-button.is-closed {
+  left: -20px; /* Position at the left edge of the screen */
+}

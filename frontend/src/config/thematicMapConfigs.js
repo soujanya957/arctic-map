@@ -1,6 +1,6 @@
 const thematicMapConfigs = {
   "environmental_data": { // shapefile name is various_environmental_rasters.shp
-    layerName: "Environmental Data",
+    layerName: "environmental_data",
     attributes: [
       { id: "bathymetry", display_name: "Bathymetry", units: "meters", description: "This raster attribute represents global gridded bathymetric data that includes sub-ice topography, representing seafloor elevation beneath permanent ice cover." },
       { id: "cs_500_sub", display_name: "Nightlights", units: "nanoWatts/sr/cm^2", description: "This raster attribute shows nightlights." },

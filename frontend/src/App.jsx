@@ -20,11 +20,15 @@ const App = () => {
   const [spatialQueryResults, setSpatialQueryResults] = useState(null);
 
   const [isThematicMode, setIsThematicMode] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const handleLayerToggle = useCallback((layerId, isSelected) => {
+  const handleLayerToggle = useCallback((layerId, isSelected, displayName) => {
     setActiveLayers(prev => ({
       ...prev,
-      [layerId]: isSelected
+      [layerId]: {
+        isSelected,
+        displayName
+      }
     }));
   }, []);
 
@@ -36,6 +40,10 @@ const App = () => {
     setActiveLayers({});
   }, []);
 
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => !prev);
+  }, []);
+
   useEffect(() => {
     if (mapboxMap && mapContainerRef.current) {
       const resizeMap = () => {
@@ -45,11 +53,48 @@ const App = () => {
       const id = requestAnimationFrame(resizeMap);
       return () => cancelAnimationFrame(id);
     }
-  }, [mapboxMap, isThematicMode]);
+  }, [mapboxMap, isThematicMode, isSidebarOpen]);
 
   const handleDrawnGeometry = useCallback(async (geometry) => {
     setDrawnGeometry(geometry);
-    // ... (rest of the spatial query logic)
+
+    if (geometry) {
+      const userSelectedLayers = Object.keys(activeLayers).filter(key => activeLayers[key]);
+
+      if (userSelectedLayers.length === 0) {
+        console.warn("No active layers to perform spatial query against.");
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:8000/api/spatial-query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                drawn_boundary: geometry,
+                target_layers: userSelectedLayers,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const queriedFeatures = data.features || [];
+        setSpatialQueryResults(queriedFeatures);
+        setHighlightedFeatures(queriedFeatures);
+      } catch (error) {
+          console.error('Error during spatial query:', error);
+          setSpatialQueryResults(null);
+          setHighlightedFeatures(null);
+      }
+    } else {
+      setSpatialQueryResults(null);
+      setHighlightedFeatures(null);
+    }
   }, [activeLayers]);
 
   useEffect(() => {
@@ -61,6 +106,7 @@ const App = () => {
         zoom: 3.35,
         projection: "globe", 
       });
+
       map.on('load', () => {
         map.setFog({
           color: "white",
@@ -83,23 +129,30 @@ const App = () => {
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: 'hidden'}}>
       
-      {/* Conditionally render the Sidebar, which contains the toggle when in main mode */}
       {!isThematicMode && (
         <Sidebar
           onLayerToggle={handleLayerToggle}
           isThematicMode={isThematicMode}
           onThematicModeToggle={handleThematicModeToggle}
+          isSidebarOpen={isSidebarOpen}
         />
       )}
 
-      {/* Main Map Area Container */}
       <div style={{ flexGrow: 1, height: '100%', position: 'relative' }}>
         <div
           ref={mapContainerRef}
           style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
         />
+
+        {!isThematicMode && (
+          <div
+            className={`sidebar-toggle-button ${isSidebarOpen ? 'is-open' : 'is-closed'}`}
+            onClick={toggleSidebar}
+          >
+            {isSidebarOpen ? '❮' : '❯'}
+          </div>
+        )}
         
-        {/* Thematic mode toggle button is only rendered here if in thematic mode */}
         {mapboxMap && isThematicMode && (
           <div className="thematic-mode-toggle-standalone">
             <label htmlFor="thematic-mode-toggle" className="toggle-switch">
@@ -139,6 +192,7 @@ const App = () => {
                 activeLayers={activeLayers}
                 onDrawGeometry={handleDrawnGeometry}
                 highlightedFeatures={highlightedFeatures}
+                isSidebarOpen={isSidebarOpen} // ⬅️ NEW: Pass sidebar state to Map
               />
             ) : (
               <ThematicMap
