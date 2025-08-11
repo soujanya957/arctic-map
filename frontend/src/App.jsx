@@ -48,7 +48,6 @@ const App = () => {
     if (mapboxMap && mapContainerRef.current) {
       const resizeMap = () => {
         mapboxMap.resize();
-        console.log(`Map resized. Container width: ${mapContainerRef.current.offsetWidth}px`);
       };
       const id = requestAnimationFrame(resizeMap);
       return () => cancelAnimationFrame(id);

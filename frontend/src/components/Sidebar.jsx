@@ -275,7 +275,10 @@ const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle, isSideba
               <strong>Spatial Query:</strong> Use the drawing tools to select an area and find intersecting features.
             </li>
             <li>
-              <strong>Thematic Map:</strong> Switch to Thematic Mode (button on the map) to color map layers based on attribute data.
+              <strong>Download Data:</strong> Download entire datasets as zipped shapefiles and custom areas/queries as GeoJSON files. 
+            </li>
+            <li>
+              <strong>Thematic Map:</strong> Switch to Thematic Mode to color map layers based on attribute data.
             </li>
             <li>
               <strong>Search:</strong> Use the search bar to find locations and features of interest.

@@ -43,7 +43,7 @@ const Map = ({
         new mapboxgl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
-                <div class="map-popup">
+                <div style="max-height: 250px; overflow-y: auto; padding-right: 10px;">
                     <h4>Layer: ${layerName}</h4>
                     <p>${displayProps}</p>
                 </div>
