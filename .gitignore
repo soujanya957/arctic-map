@@ -11,6 +11,9 @@ venv/
 backend/.env
 frontend/.env
 
-# Node modules and build files
+# Ignore node modules and build files
 frontend/node_modules/
 dist/.DS_Store
+
+# Ignore project-specific metadata information
+backend/metadata.html

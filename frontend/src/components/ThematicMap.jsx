@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import thematicMapConfigs from '../config/thematicMapConfigs';
-import '../styles/ThematicMap.css'; // New import for toggle switch styles
+import '../styles/ThematicMap.css'; 
 
 // Helper function to apply thematic styling 
 const applyThematicStyling = async (map, layerConfig, attribute, setMinMaxValues) => {
@@ -227,13 +227,12 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
         gap: '10px', // Space between dropdowns
         alignItems: 'center'
       }}>
-        {/* Removed H2 "Thematic Map Options" to make it more compact */}
-        {/* Optional: Button to switch back to normal mode if desired here */}
+        {/* Optional: Button to switch back to normal mode if desired here
         {onThematicModeToggle && (
           <button onClick={onThematicModeToggle} style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', cursor: 'pointer' }}>
             Switch to Normal Map
           </button>
-        )}
+        )} */}
 
         <div>
           <label htmlFor="thematic-layer-select" style={{ marginRight: '5px' }}>Layer:</label>

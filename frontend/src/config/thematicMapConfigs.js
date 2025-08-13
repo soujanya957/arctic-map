@@ -3,7 +3,7 @@ const thematicMapConfigs = {
     layerName: "environmental_data",
     attributes: [
       { id: "bathymetry", display_name: "Bathymetry", units: "meters", description: "This raster attribute represents global gridded bathymetric data that includes sub-ice topography, representing seafloor elevation beneath permanent ice cover." },
-      { id: "cs_500_sub", display_name: "Nightlights", units: "nanoWatts/sr/cm^2", description: "This raster attribute shows nightlights." },
+      { id: "cs_500_sub", display_name: "Nightlights", units: "nanoWatts/sr/cm^2", description: "This raster provides a cloud-screened (CS) subset of monthly average radiance composite images derived from the Visible Infrared Imaging Radiometer Suite (VIIRS) Day/Night Band (DNB). The data has been corrected for stray light and filtered to remove cloud cover artifacts." },
       { id: "no2_canada", display_name: "NO2 Canada", units: "mol/m^2", description: "This raster attribute shows NO2 concentrations over a large portion of Canada and the waters directly surrounding it. " },
       { id: "no2_icelan", display_name: "NO2 Iceland", units: "mol/m^2", description: "This raster attribute shows NO2 concentrations over a large portion of Iceland and the waters directly surrounding it." },
       { id: "permaf_pro", display_name: "Permafrost Probability", units: "Fraction", description: "This raster attribute shows permafrost occurrence probability with fraction values from 0 to 1 assigned to each grid cell with MAGT < 0°C." },

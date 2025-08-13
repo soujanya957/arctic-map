@@ -74,12 +74,13 @@ const Sidebar = ({ onLayerToggle, isThematicMode, onThematicModeToggle, isSideba
     name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   const handleToggle = (layer) => {
+    const newValue = !selectedLayers[layer];
     const updated = {
       ...selectedLayers,
-      [layer]: !selectedLayers[layer],
+      [layer]: newValue,
     };
     setSelectedLayers(updated);
-    onLayerToggle(layer, !selectedLayers[layer]);
+    onLayerToggle(layer, newValue); // Use the new value, not the old negated value
   };
 
   const toggleDropdown = (subtheme) => {
