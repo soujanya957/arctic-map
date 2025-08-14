@@ -509,27 +509,38 @@ input:checked + .slider:before {
   transition: opacity 0.3s ease-in-out;
 }
 
-/* Styles for the new toggle button */
+/* Styles for the sidebar toggle button */
 .sidebar-toggle-button {
   position: absolute;
   top: 50%;
-  left: 0;
-  transform: translateY(-50%) translateX(100%);
+  transform: translateY(-50%);
   z-index: 100;
   background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-left: none; /* Remove left border so it connects to sidebar */
   border-radius: 0 5px 5px 0;
   cursor: pointer;
-  padding: 10px 5px;
+  padding: 10px 8px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   font-weight: bold;
   user-select: none;
-  transition: left 0.3s ease-in-out, transform 0.3s ease-in-out;
+  transition: left 0.3s ease-in-out;
+  color: #666;
+  font-size: 14px;
+  line-height: 1;
 }
 
+.sidebar-toggle-button:hover {
+  background-color: #e8e8e8;
+  color: #333;
+}
+
+/* When sidebar is open - position button at right edge of sidebar */
 .sidebar-toggle-button.is-open {
-  left: -20px; /* Position next to the open sidebar */
+  left: 0px; /* Match the sidebar width exactly */
 }
 
+/* When sidebar is closed - position button at left edge of screen */
 .sidebar-toggle-button.is-closed {
-  left: -20px; /* Position at the left edge of the screen */
+  left: 0px; /* Match the collapsed sidebar width */
 }

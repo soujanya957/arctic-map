@@ -47,13 +47,13 @@ const applyThematicStyling = async (map, layerConfig, attribute, setMinMaxValues
         'interpolate',
         ['linear'],
         ['get', attribute],
-        minVal, 'rgba(255, 255, 204, 0.7)',
-        minVal + (maxVal - minVal) * 0.25, 'rgba(254, 217, 118, 0.7)',
-        minVal + (maxVal - minVal) * 0.5, 'rgba(254, 178, 76, 0.7)',
-        minVal + (maxVal - minVal) * 0.75, 'rgba(253, 141, 60, 0.7)',
-        maxVal, 'rgba(227, 26, 28, 0.7)'
+        minVal, 'rgba(255, 220, 220, 1.0)', // Opaque light red
+        minVal + (maxVal - minVal) * 0.25, 'rgba(255, 127, 127, 1.0)',
+        minVal + (maxVal - minVal) * 0.5, 'rgba(255, 76, 76, 1.0)',
+        minVal + (maxVal - minVal) * 0.75, 'rgba(255, 25, 25, 1.0)',
+        maxVal, 'rgba(153, 0, 0, 1.0)' // Opaque dark red
       ];
-
+    
       map.addLayer({
         id: layerIdFill,
         type: 'fill',
@@ -190,20 +190,22 @@ const ThematicMap = ({ mapboxMap, onThematicModeToggle }) => {
     const interval = range / (steps - 1);
 
     const colors = [
-      'rgba(255, 255, 204, 0.7)',
-      'rgba(254, 217, 118, 0.7)',
-      'rgba(254, 178, 76, 0.7)',
-      'rgba(253, 141, 60, 0.7)',
-      'rgba(227, 26, 28, 0.7)'
+      'rgba(255, 220, 220, 1.0)', 
+      'rgba(255, 127, 127, 1.0)',
+      'rgba(255, 76, 76, 1.0)',
+      'rgba(255, 25, 25, 1.0)',
+      'rgba(153, 0, 0, 1.0)'
     ];
 
-    return Array.from({ length: steps }).map((_, i) => {
-      const value = min + i * interval;
+    const stepsArray = colors.map((color, index) => {
+      const value = min + (interval * index);
       return {
-        value: value.toFixed(2),
-        color: colors[i]
+          value: value.toFixed(2),
+          color: color
       };
     });
+
+    return stepsArray;
   };
 
   const colorSteps = generateColorSteps(minMaxValues.min, minMaxValues.max);

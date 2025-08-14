@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import * as mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import FeatureHighlighter from './FeatureHighlighter';
@@ -7,16 +7,98 @@ import DrawControls from './DrawControls';
 import SpatialQueryPanel from './SpatialQueryPanel';
 import bbox from '@turf/bbox';
 
+// Security utility functions - placed outside the component
+const escapeHtml = (unsafe) => {
+  if (unsafe == null) return '';
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+const createSafePopup = (e, layerName, displayName, mapboxMap) => {
+  e.preventDefault();
+  const feature = e.features[0];
+  if (!feature) return;
+
+  // Get properties and filter out Mapbox-specific ones
+  const properties = Object.entries(feature.properties)
+    .filter(([key, value]) => !key.startsWith('_'))
+    .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
+
+  // Create popup container
+  const popupContainer = document.createElement('div');
+  popupContainer.style.cssText = 'max-height: 250px; overflow-y: auto; padding-right: 10px;';
+
+  // Create and safely set header with display name
+  const header = document.createElement('h4');
+  header.textContent = `Layer: ${displayName || layerName}`; // Use display name if available
+  popupContainer.appendChild(header);
+
+  // Create properties container
+  const propsContainer = document.createElement('div');
+  
+  // Safely create property entries
+  Object.entries(properties).forEach(([key, value]) => {
+    const propDiv = document.createElement('div');
+    propDiv.style.marginBottom = '4px';
+    
+    const keySpan = document.createElement('strong');
+    keySpan.textContent = key + ': ';
+    
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = String(value);
+    
+    propDiv.appendChild(keySpan);
+    propDiv.appendChild(valueSpan);
+    propsContainer.appendChild(propDiv);
+  });
+
+  popupContainer.appendChild(propsContainer);
+
+  // Create popup with safe DOM elements instead of HTML string
+  new mapboxgl.Popup()
+    .setLngLat(e.lngLat)
+    .setDOMContent(popupContainer) 
+    .addTo(mapboxMap);
+};
+
+// map component starts here
 const Map = ({
   mapboxMap,
   activeLayers,
   onDrawGeometry,
   highlightedFeatures,
 }) => {
+  const [layerDisplayNames, setLayerDisplayNames] = useState({});
 
   const loadingLayers = useRef(new Set()); // tracks user's most recently checked layer, fetching from backend API
   const clickListeners = useRef(new window.Map()); // Store references to click listeners
   const prevActiveLayers = useRef({}); // Track previous state to detect changes
+  
+  // Fetch layer hierarchy to get display names
+  useEffect(() => {
+    fetch("http://localhost:8000/api/layer_hierarchy")
+      .then((res) => res.json())
+      .then((data) => {
+        const displayNameMapping = {};
+        
+        // Extract display names from the hierarchy data
+        for (const theme in data) {
+          for (const subtheme in data[theme]) {
+            const datasets = data[theme][subtheme];
+            datasets.forEach(entry => {
+              displayNameMapping[entry.layer_name] = entry.display_name;
+            });
+          }
+        }
+        
+        setLayerDisplayNames(displayNameMapping);
+      })
+      .catch((err) => console.error("Failed to fetch layer hierarchy for display names:", err));
+  }, []);
   
   // This function adds a click event listener to a layer to show a popup
   const addPopupClickListeners = useCallback((layerId, layerName) => {
@@ -28,34 +110,11 @@ const Map = ({
       mapboxMap.off("click", layerId, existingListener);
     }
 
-    const onClick = (e) => {
-        // Prevent default behavior to avoid interfering with other events
-        e.preventDefault(); 
-        
-        // Use the first feature in the array for the popup
-        const feature = e.features[0];
-        if (!feature) return;
+    // Get display name for this layer
+    const displayName = layerDisplayNames[layerName];
 
-        // Get properties and filter out Mapbox-specific ones
-        const properties = Object.entries(feature.properties)
-            .filter(([key, value]) => !key.startsWith('_'))
-            .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
-        
-        // Format properties for display
-        const displayProps = Object.entries(properties)
-            .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-            .join('<br>');
-        
-        new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`
-                <div style="max-height: 250px; overflow-y: auto; padding-right: 10px;">
-                    <h4>Layer: ${layerName}</h4>
-                    <p>${displayProps}</p>
-                </div>
-            `)
-            .addTo(mapboxMap);
-    };
+    // Create secure click handler using our safe popup function
+    const onClick = (e) => createSafePopup(e, layerName, displayName, mapboxMap);
 
     // Store the listener reference
     clickListeners.current.set(layerId, onClick);
@@ -68,7 +127,7 @@ const Map = ({
         clickListeners.current.delete(layerId);
       }
     };
-  }, [mapboxMap]);
+  }, [mapboxMap, layerDisplayNames]);
 
   // This is the core function for adding a new layer to the map
   const addLayerToMap = useCallback((layerName, geojson) => {
@@ -206,7 +265,7 @@ const Map = ({
     }
   }, [mapboxMap]);
 
-  // manages active data layers in sidebar 
+  // manages active data layers in sidebar - PROPERLY FIXED VERSION
   useEffect(() => {
     if (!mapboxMap) return;
 
@@ -300,7 +359,7 @@ const Map = ({
               const layerTypes = new Set(validFeatures.map(f => f.geometry.type));
               const layerId = `layer-${layerName}`;
               
-              // Add layers for polygons, lines, points and their click listeners
+              // Add layers for polygons, lines, points and their SECURE click listeners
               if (layerTypes.has("Polygon") || layerTypes.has("MultiPolygon")) {
                 mapboxMap.addLayer({
                   id: `${layerId}-polygons`,
@@ -323,33 +382,11 @@ const Map = ({
                   },
                 });
                 
-                // Add click listener for polygons
-                const onClick = (e) => {
-                  e.preventDefault();
-                  const feature = e.features[0];
-                  if (!feature) return;
-
-                  const properties = Object.entries(feature.properties)
-                      .filter(([key, value]) => !key.startsWith('_'))
-                      .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
-                  
-                  const displayProps = Object.entries(properties)
-                      .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-                      .join('<br>');
-                  
-                  new mapboxgl.Popup()
-                      .setLngLat(e.lngLat)
-                      .setHTML(`
-                          <div style="max-height: 250px; overflow-y: auto; padding-right: 10px;">
-                              <h4>Layer: ${layerName}</h4>
-                              <p>${displayProps}</p>
-                          </div>
-                      `)
-                      .addTo(mapboxMap);
-                };
-                
-                clickListeners.current.set(`${layerId}-polygons`, onClick);
-                mapboxMap.on("click", `${layerId}-polygons`, onClick);
+                // Add secure click listener for polygons
+                const displayName = layerDisplayNames[layerName];
+                const onPolygonClick = (e) => createSafePopup(e, layerName, displayName, mapboxMap);
+                clickListeners.current.set(`${layerId}-polygons`, onPolygonClick);
+                mapboxMap.on("click", `${layerId}-polygons`, onPolygonClick);
               }
               
               if (layerTypes.has("LineString") || layerTypes.has("MultiLineString")) {
@@ -364,33 +401,11 @@ const Map = ({
                   },
                 });
                 
-                // Add click listener for lines
-                const onClick = (e) => {
-                  e.preventDefault();
-                  const feature = e.features[0];
-                  if (!feature) return;
-
-                  const properties = Object.entries(feature.properties)
-                      .filter(([key, value]) => !key.startsWith('_'))
-                      .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
-                  
-                  const displayProps = Object.entries(properties)
-                      .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-                      .join('<br>');
-                  
-                  new mapboxgl.Popup()
-                      .setLngLat(e.lngLat)
-                      .setHTML(`
-                          <div style="max-height: 250px; overflow-y: auto; padding-right: 10px;">
-                              <h4>Layer: ${layerName}</h4>
-                              <p>${displayProps}</p>
-                          </div>
-                      `)
-                      .addTo(mapboxMap);
-                };
-                
-                clickListeners.current.set(`${layerId}-lines`, onClick);
-                mapboxMap.on("click", `${layerId}-lines`, onClick);
+                // Add secure click listener for lines
+                const displayName = layerDisplayNames[layerName];
+                const onLineClick = (e) => createSafePopup(e, layerName, displayName, mapboxMap);
+                clickListeners.current.set(`${layerId}-lines`, onLineClick);
+                mapboxMap.on("click", `${layerId}-lines`, onLineClick);
               }
               
               if (layerTypes.has("Point") || layerTypes.has("MultiPoint")) {
@@ -407,33 +422,11 @@ const Map = ({
                   },
                 });
                 
-                // Add click listener for points
-                const onClick = (e) => {
-                  e.preventDefault();
-                  const feature = e.features[0];
-                  if (!feature) return;
-
-                  const properties = Object.entries(feature.properties)
-                      .filter(([key, value]) => !key.startsWith('_'))
-                      .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
-                  
-                  const displayProps = Object.entries(properties)
-                      .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-                      .join('<br>');
-                  
-                  new mapboxgl.Popup()
-                      .setLngLat(e.lngLat)
-                      .setHTML(`
-                          <div style="max-height: 250px; overflow-y: auto; padding-right: 10px;">
-                              <h4>Layer: ${layerName}</h4>
-                              <p>${displayProps}</p>
-                          </div>
-                      `)
-                      .addTo(mapboxMap);
-                };
-                
-                clickListeners.current.set(`${layerId}-points`, onClick);
-                mapboxMap.on("click", `${layerId}-points`, onClick);
+                // Add secure click listener for points
+                const displayName = layerDisplayNames[layerName];
+                const onPointClick = (e) => createSafePopup(e, layerName, displayName, mapboxMap);
+                clickListeners.current.set(`${layerId}-points`, onPointClick);
+                mapboxMap.on("click", `${layerId}-points`, onPointClick);
               }
 
               // Fit map view to the bounding box of the most recently selected layer's features
@@ -460,7 +453,7 @@ const Map = ({
     // Update the previous state
     prevActiveLayers.current = { ...activeLayers };
 
-  }, [activeLayers, mapboxMap]); // Removed addLayerToMap and removeLayerFromMap from dependencies
+  }, [activeLayers, mapboxMap, layerDisplayNames]); // Added layerDisplayNames to dependencies
 
   // Cleanup function when Map.jsx component unmounts
   useEffect(() => {
@@ -516,7 +509,7 @@ const Map = ({
       {mapboxMap && <FeatureHighlighter mapboxMap={mapboxMap} highlightedFeatures={highlightedFeatures} />}
 
       {mapboxMap && highlightedFeatures && highlightedFeatures.length > 0 && (
-          <SpatialQueryPanel highlightedFeatures={highlightedFeatures} />
+          <SpatialQueryPanel highlightedFeatures={highlightedFeatures} layerDisplayNames={layerDisplayNames} />
       )}
     </>
   );
